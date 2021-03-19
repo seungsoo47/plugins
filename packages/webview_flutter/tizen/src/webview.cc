@@ -4,7 +4,7 @@
 #include <Ecore_IMF_Evas.h>
 #include <Ecore_Input_Evas.h>
 #include <flutter_platform_view.h>
-#include <flutter_texture_registrar.h>
+#include <flutter_tizen_texture_registrar.h>
 
 #include <map>
 #include <memory>
