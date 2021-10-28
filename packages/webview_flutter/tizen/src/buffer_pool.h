@@ -24,9 +24,9 @@ class BufferUnit {
   bool IsUsed();
   tbm_surface_h Surface();
   FlutterDesktopGpuBuffer* GpuBuffer();
-#ifndef NDEBUG
+
   void DumpToPng(int file_name);
-#endif
+
 
  private:
   bool isUsed_;

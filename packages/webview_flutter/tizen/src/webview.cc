@@ -4,6 +4,8 @@
 
 #include "webview.h"
 
+#include <Elementary.h>
+#include <Ecore.h>
 #include <Ecore_IMF_Evas.h>
 #include <Ecore_Input_Evas.h>
 #include <flutter/texture_registrar.h>
@@ -29,7 +31,7 @@ extern "C" size_t LWE_EXPORT createWebViewInstance(
     const std::function<::LWE::WebContainer::ExternalImageInfo(void)>&
         prepareImageCb,
     const std::function<void(::LWE::WebContainer*, bool isRendered)>&
-        renderedCb);
+        renderedCb,bool useSWBackend);
 
 template <typename T = flutter::EncodableValue>
 class NavigationRequestResult : public flutter::MethodResult<T> {
@@ -301,6 +303,95 @@ WebView::WebView(flutter::PluginRegistrar* registrar, int viewId,
 
         return true;
       });
+
+  webview_instance_->RegisterShowDropdownMenuHandler(
+            [](LWE::WebContainer* view, const std::vector<std::string>* list,
+               int checkedPosition) -> void {
+
+                LOG_INFO("[LEESS] RegisterShowDropdownMenuHandler \n");
+
+                Evas_Object* wndObj = elm_win_util_standard_add("genlist", "Genlist");
+
+                // elm_win_aux_hint_add(wndObj, "wm.policy.win.user.geometry", "1");
+                elm_policy_set(ELM_POLICY_QUIT, ELM_POLICY_QUIT_LAST_WINDOW_CLOSED);
+                elm_win_autodel_set(wndObj, EINA_TRUE);
+                Elm_Genlist_Item_Class *itc = nullptr;
+
+                itc = elm_genlist_item_class_new();
+                itc->item_style = "default";
+                itc->func.text_get = [](void *data, Evas_Object *obj, const char *part) -> char*
+                    {
+                        if (!strcmp(part, "elm.text")) {
+                            char buf[256];
+                            snprintf(buf, sizeof(buf), "%s", (char*)data);
+                            LOG_INFO("[LEESS] text_get: %s\n", buf);
+                            return strdup(buf);
+                        } else {
+                            return nullptr;
+                        }
+                    };
+                itc->func.content_get = nullptr;
+                itc->func.state_get = nullptr;
+                itc->func.del = nullptr;
+
+
+                Evas_Object *genlist = elm_genlist_add(wndObj);
+                elm_object_style_set(genlist, "solid/default");
+                struct DataItem {
+                    LWE::WebContainer* view;
+                    Evas_Object* win;
+                    Evas_Object* genlist;
+                    char* buf;
+                    int index;
+                };
+                for (size_t i = 0; i < list->size(); i++) {
+                    char* b = new char[1024];
+                    DataItem* d = new DataItem;
+                    d->view = view;
+                    d->win = wndObj;
+                    d->genlist = genlist;
+                    d->buf = b;
+                    d->index = i;
+                    memcpy(b, list->at(i).c_str(), list->at(i).size()+1);
+
+                    elm_genlist_item_append(genlist, itc,
+                            (void *)b, nullptr,
+                            ELM_GENLIST_ITEM_NONE,
+                            [](void *data, Evas_Object *obj, void *event_info)
+                            {
+                                DataItem* d = (DataItem*)data;
+                                LOG_INFO("[LEESS] elm_genlist_item_append: [%d, %s]\n", d->index, d->buf);
+                                LWE::WebContainer* view = (LWE::WebContainer*)d->view;
+
+                                struct Param {
+                                    int position;
+                                };
+                                Param* p = new Param();
+                                p->position = d->index;
+
+                                view->CallHandler(std::string("onDropdownMenuItemSelected"), (void*)p);
+
+                                evas_object_hide(d->genlist);
+                                evas_object_hide(d->win);
+                                delete d->buf;
+                                delete d;
+                            }, (void *)d);
+                }
+
+                elm_genlist_item_class_free(itc);
+
+                if (!elm_layout_file_set(genlist, "/run/controlTV.edj", "elm/picker")) {
+                    LOG_INFO("error elm_layout_file_set, ");
+                } else {
+                    elm_theme_overlay_add(nullptr, "/run/controlTV.edj");
+                }
+
+                evas_object_resize(wndObj, 400, 500);
+                evas_object_size_hint_weight_set(genlist, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+                evas_object_resize(genlist, 400, 500);
+                evas_object_show(genlist);
+                evas_object_show(wndObj);
+            });
 
   webview_instance_->LoadURL(url);
 }
@@ -752,6 +843,7 @@ void WebView::SetDirection(int direction) {
   // TODO: implement this if necessary
 }
 
+static int ccc = 0;
 void WebView::InitWebView() {
   if (webview_instance_ != nullptr) {
     webview_instance_->Destroy();
@@ -774,6 +866,7 @@ void WebView::InitWebView() {
         } else {
           result.imageAddress = nullptr;
         }
+        LOG_INFO("[LEESS] WebView::PrepareImageCB()");
         return result;
       },
       [this](LWE::WebContainer* c, bool isRendered) {
@@ -785,10 +878,13 @@ void WebView::InitWebView() {
           } else {
             texture_registrar_->MarkTextureFrameAvailable(GetTextureId());
           }
+          
           candidate_surface_ = working_surface_;
+          candidate_surface_->DumpToPng(ccc++);
+          LOG_INFO("[LEESS] WebView::RenederdCB(): [%d]", ccc);
           working_surface_ = nullptr;
         }
-      });
+      }, false);
 #ifndef TV_PROFILE
   auto settings = webview_instance_->GetSettings();
   settings.SetUserAgentString(
@@ -946,6 +1042,9 @@ FlutterDesktopGpuBuffer* WebView::ObtainGpuBuffer(size_t width, size_t height) {
   }
   rendered_surface_ = candidate_surface_;
   candidate_surface_ = nullptr;
+
+  LOG_INFO("[LEESS] WebView::ObtainGpuBuffer()");
+
   return rendered_surface_->GpuBuffer();
 }
 

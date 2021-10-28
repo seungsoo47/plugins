@@ -118,7 +118,7 @@ void BufferPool::Prepare(int width, int height) {
   }
 }
 
-#ifndef NDEBUG
+
 #include <cairo.h>
 void BufferUnit::DumpToPng(int file_name) {
   char filePath[256];
@@ -137,4 +137,4 @@ void BufferUnit::DumpToPng(int file_name) {
   tbm_surface_unmap(tbm_surface_);
   cairo_surface_destroy(png_buffer);
 }
-#endif
+

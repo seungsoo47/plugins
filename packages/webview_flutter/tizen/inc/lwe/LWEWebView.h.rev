@@ -85,7 +85,6 @@ public:
     bool NeedsDownloadWebFontsEarly() const;
     bool UseHttp2() const;
     uint32_t NeedsDownScaleImageResourceLargerThan() const;
-    bool ScrollbarVisible() const;
     void SetUserAgentString(const std::string& ua);
     void SetCacheMode(int mode);
     void SetProxyURL(const std::string& proxyURL);
@@ -102,7 +101,6 @@ public:
     void SetUseHttp2(bool b);
     void SetNeedsDownScaleImageResourceLargerThan(
         uint32_t demention); // Experimental
-    void SetScrollbarVisible(bool visible);
 
 private:
     std::string m_defaultUserAgent;
@@ -119,7 +117,6 @@ private:
     bool m_needsDownloadWebFontsEarly;
     bool m_useHttp2; // default value is false
     uint32_t m_needsDownScaleImageResourceLargerThan;
-    bool m_scrollbarVisible;
 };
 
 class LWE_EXPORT ResourceError {
@@ -154,10 +151,6 @@ public:
         size_t bufferStride;
     };
 
-    struct ExternalImageInfo {
-        void* imageAddress;
-    };
-
     struct RenderResult {
         size_t updatedX;
         size_t updatedY;
@@ -172,13 +165,6 @@ public:
     void RegisterOnRenderedHandler(
         const std::function<void(WebContainer*,
                                  const RenderResult& renderResult)>& cb);
-
-    static WebContainer* CreateWithPlatformImage(
-        unsigned width, unsigned height,
-        const std::function<ExternalImageInfo(void)>& prepareImageCb,
-        const std::function<void(WebContainer*, bool needsFlush)>& flushCb,
-        float devicePixelRatio, const char* defaultFontName, const char* locale,
-        const char* timezoneID);
     // <--- end of function set for render to buffer
 
     // Function set for render with OpenGL
@@ -190,6 +176,10 @@ public:
         float devicePixelRatio, const char* defaultFontName, const char* locale,
         const char* timezoneID);
 
+    struct ExternalImageInfo {
+        void* imageAddress;
+    };
+
     static WebContainer* CreateGLWithPlatformImage(
         unsigned width, unsigned height,
         const std::function<void(WebContainer*)>& onGLMakeCurrent,
@@ -199,7 +189,6 @@ public:
         const std::function<void(WebContainer*, bool needsFlush)>& flushCb,
         float devicePixelRatio, const char* defaultFontName, const char* locale,
         const char* timezoneID);
-
     // <--- end of function set for render with OpenGL
 
     // Function set for headless
