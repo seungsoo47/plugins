@@ -709,6 +709,72 @@ class GMarkerClustererOptions {
   }
 }
 
+/// This class represents a ground overlay on the map.
+class GGroundOverlay {
+  /// GGroundOverlay Constructor.
+  GGroundOverlay(String url, String bounds, [GGroundOverlayOptions? opts]) : id = _gid++ {
+    _createGroundOverlay(url, bounds, opts);
+  }
+
+  Future<void> _createGroundOverlay(String url, String bounds, GGroundOverlayOptions? opts) async {
+    final String optionsCode = opts != null ? opts.toString() : '{}';
+    await webController!.runJavaScript(
+      'var ${toString()} = new google.maps.GroundOverlay("$url", $bounds, $optionsCode);',
+    );
+  }
+
+  /// GGroundOverlay id.
+  final int id;
+  static int _gid = 0;
+
+  @override
+  String toString() {
+    return 'groundOverlay$id';
+  }
+
+  /// Sets map.
+  set map(Object? /*GMap?|StreetViewPanorama?*/ map) => _setMap(map);
+
+  /// Sets opacity.
+  set opacity(num? opacity) => _setOpacity(opacity);
+
+  /// Sets clickable.
+  set clickable(bool? clickable) => _setClickable(clickable);
+
+  Future<void> _setMap(Object? /*GMap?|StreetViewPanorama?*/ map) async {
+    await callMethod(this, 'setMap', <Object?>[map]);
+  }
+
+  Future<void> _setOpacity(num? opacity) async {
+    await callMethod(this, 'setOpacity', <num?>[opacity]);
+  }
+
+  Future<void> _setClickable(bool? clickable) async {
+    await callMethod(this, 'set', <Object?>['clickable', clickable]);
+  }
+}
+
+/// This class defines GroundOverlay's options.
+class GGroundOverlayOptions {
+  /// GGroundOverlayOptions Constructor.
+  GGroundOverlayOptions();
+
+  /// The opacity of the overlay, expressed as a number between 0 and 1.
+  num? opacity;
+
+  /// If true, the ground overlay can receive mouse events.
+  bool? clickable;
+
+  /// The map on which to display the overlay.
+  Object? map;
+
+  @override
+  String toString() {
+    final String mapVar = map != null ? 'map' : 'null';
+    return '{opacity:$opacity, clickable:$clickable, map: $mapVar}';
+  }
+}
+
 /// Returns webview controller instance
 WebViewController? webController;
 

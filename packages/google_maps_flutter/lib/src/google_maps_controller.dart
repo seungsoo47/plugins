@@ -21,6 +21,7 @@ class GoogleMapsController {
     Set<Polygon> polygons = const <Polygon>{},
     Set<Polyline> polylines = const <Polyline>{},
     Set<Circle> circles = const <Circle>{},
+    Set<GroundOverlay> groundOverlays = const <GroundOverlay>{},
     Set<ClusterManager> clusterManagers = const <ClusterManager>{},
     Map<String, dynamic> mapOptions = const <String, dynamic>{},
   })  : _mapId = mapId,
@@ -30,11 +31,14 @@ class GoogleMapsController {
         _polygons = polygons,
         _polylines = polylines,
         _circles = circles,
+        _groundOverlays = groundOverlays,
         _clusterManagers = clusterManagers,
         _rawMapOptions = mapOptions {
     _circlesController = CirclesController(stream: _streamController);
     _polygonsController = PolygonsController(stream: _streamController);
     _polylinesController = PolylinesController(stream: _streamController);
+    _groundOverlaysController =
+        GroundOverlaysController(stream: _streamController);
     _clusterManagersController = ClusterManagersController(
       stream: _streamController,
     );
@@ -54,6 +58,7 @@ class GoogleMapsController {
   final Set<Polygon> _polygons;
   final Set<Polyline> _polylines;
   final Set<Circle> _circles;
+  final Set<GroundOverlay> _groundOverlays;
   final Set<ClusterManager> _clusterManagers;
   final Completer<bool> _pageFinishedCompleter = Completer<bool>();
   WebViewWidget? _webview;
@@ -159,6 +164,7 @@ class GoogleMapsController {
       )
       ..addJavaScriptChannel('PolygonClick', onMessageReceived: _onPolygonClick)
       ..addJavaScriptChannel('CircleClick', onMessageReceived: _onCircleClick)
+      ..addJavaScriptChannel('GroundOverlayClick', onMessageReceived: _onGroundOverlayClick)
       ..loadFile(path);
 
     _webview = WebViewWidget(controller: controller);
@@ -219,6 +225,7 @@ class GoogleMapsController {
   PolygonsController? _polygonsController;
   PolylinesController? _polylinesController;
   MarkersController? _markersController;
+  GroundOverlaysController? _groundOverlaysController;
   ClusterManagersController? _clusterManagersController;
 
   // Keeps track if _attachGeometryControllers has been called or not.
@@ -460,6 +467,23 @@ class GoogleMapsController {
     }
   }
 
+  void _onGroundOverlayClick(JavaScriptMessage message) {
+    try {
+      final dynamic id = json.decode(message.message);
+      if (_groundOverlaysController != null && id is int) {
+        final GroundOverlayId? groundOverlayId =
+            _groundOverlaysController!._idToGroundOverlayId[id];
+        final GroundOverlayController? groundOverlay =
+            _groundOverlaysController!._groundOverlayIdToController[groundOverlayId];
+        if (groundOverlay?.tapEvent != null) {
+          groundOverlay?.tapEvent!();
+        }
+      }
+    } catch (e) {
+      debugPrint('JavaScript Error: $e');
+    }
+  }
+
   /// Initializes the map from the stored `rawOptions`.
   ///
   /// This is called by the [GoogleMapsPlugin.init] method when appropriate.
@@ -478,6 +502,7 @@ class GoogleMapsController {
       circles: _circles,
       polygons: _polygons,
       polylines: _polylines,
+      groundOverlays: _groundOverlays,
     );
 
     _initClustering(_clusterManagers);
@@ -506,6 +531,10 @@ class GoogleMapsController {
       'Cannot attach a map to a null MarkersController instance.',
     );
     assert(
+      _groundOverlaysController != null,
+      'Cannot attach a map to a null GroundOverlaysController instance.',
+    );
+    assert(
       _clusterManagersController != null,
       'Cannot attach a map to a null ClusterManagersController instance.',
     );
@@ -514,6 +543,7 @@ class GoogleMapsController {
     _polygonsController!.bindToMap(_mapId, _webview!);
     _polylinesController!.bindToMap(_mapId, _webview!);
     _markersController!.bindToMap(_mapId, _webview!);
+    _groundOverlaysController!.bindToMap(_mapId, _webview!);
     _clusterManagersController!.bindToMap(_mapId, _webview!);
 
     util.webController = controller;
@@ -530,6 +560,7 @@ class GoogleMapsController {
     Set<Circle> circles = const <Circle>{},
     Set<Polygon> polygons = const <Polygon>{},
     Set<Polyline> polylines = const <Polyline>{},
+    Set<GroundOverlay> groundOverlays = const <GroundOverlay>{},
   }) {
     assert(
       _controllersBoundToMap,
@@ -543,6 +574,7 @@ class GoogleMapsController {
     _circlesController!.addCircles(circles);
     _polygonsController!.addPolygons(polygons);
     _polylinesController!.addPolylines(polylines);
+    _groundOverlaysController!.addGroundOverlays(groundOverlays);
   }
 
   // Merges new options coming from the plugin into the _rawMapOptions map.
@@ -805,6 +837,17 @@ class GoogleMapsController {
     _markersController?.removeMarkers(updates.markerIdsToRemove);
   }
 
+  /// Applies [GroundOverlayUpdates] to the currently managed ground overlays.
+  void updateGroundOverlays(GroundOverlayUpdates updates) {
+    assert(
+      _groundOverlaysController != null,
+      'Cannot update ground overlays after dispose().',
+    );
+    _groundOverlaysController?.addGroundOverlays(updates.groundOverlaysToAdd);
+    _groundOverlaysController?.changeGroundOverlays(updates.groundOverlaysToChange);
+    _groundOverlaysController?.removeGroundOverlays(updates.groundOverlayIdsToRemove);
+  }
+
   /// Applies [ClusterManagerUpdates] to the currently managed cluster managers.
   void updateClusterManagers(ClusterManagerUpdates updates) {
     assert(
@@ -854,6 +897,7 @@ class GoogleMapsController {
     _polygonsController = null;
     _polylinesController = null;
     _markersController = null;
+    _groundOverlaysController = null;
     _clusterManagersController = null;
     _streamController.close();
   }

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import 'animate_camera.dart';
 import 'clustering.dart';
+import 'ground_overlay.dart';
 import 'heatmap.dart';
 import 'lite_mode.dart';
 import 'map_click.dart';
@@ -33,9 +34,10 @@ final List<GoogleMapExampleAppPage> _allPages = <GoogleMapExampleAppPage>[
   const PlaceMarkerPage(),
   const MarkerIconsPage(),
   const ScrollingMapPage(),
-  const PlacePolylinePage(),
   const PlacePolygonPage(),
+  const PlacePolylinePage(),
   const PlaceCirclePage(),
+  const GroundOverlayPage(),
   const PaddingPage(),
   const SnapshotPage(),
   const LiteModePage(),

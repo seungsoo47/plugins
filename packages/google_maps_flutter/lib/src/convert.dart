@@ -400,3 +400,25 @@ util.GCircleOptions _circleOptionsFromCircle(Circle circle) {
     ..visible = circle.visible
     ..zIndex = circle.zIndex;
 }
+
+/// Converts a [MapBitmap] to an image URL.
+String urlFromMapBitmap(MapBitmap mapBitmap) {
+  final List<Object?> iconConfig = mapBitmap.toJson() as List<Object?>;
+  if (iconConfig.isNotEmpty) {
+    if (iconConfig[0] == 'asset') {
+      final Map<String, Object?> assetConfig =
+          iconConfig[1]! as Map<String, Object?>;
+      return '../${assetConfig['assetName']}';
+    } else if (iconConfig[0] == 'bytes') {
+      final Map<String, Object?> assetConfig =
+          iconConfig[1]! as Map<String, Object?>;
+      return 'data:image/png;base64,${base64Encode(assetConfig['byteData']! as List<int>)}';
+    }
+  }
+  return '';
+}
+
+/// Serializes [LatLngBounds] to a Javascript LatLngBoundsLiteral string.
+String boundsLiteral(LatLngBounds bounds) {
+  return '{south: ${bounds.southwest.latitude}, west: ${bounds.southwest.longitude}, north: ${bounds.northeast.latitude}, east: ${bounds.northeast.longitude}}';
+}
