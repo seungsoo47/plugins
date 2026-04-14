@@ -15,14 +15,16 @@ class GroundOverlayController {
     WebViewController? controller,
   })  : _groundOverlay = groundOverlay,
         _consumeTapEvents = consumeTapEvents,
+        _controller = controller,
         tapEvent = onTap {
-    if (controller != null) {
-      _addGroundOverlayEvent(controller);
+    if (_controller != null) {
+      _addGroundOverlayEvent(_controller);
     }
   }
 
   util.GGroundOverlay? _groundOverlay;
   final bool _consumeTapEvents;
+  final WebViewController? _controller;
 
   /// GroundOverlay's tap event.
   ui.VoidCallback? tapEvent;
@@ -39,12 +41,21 @@ class GroundOverlayController {
   /// Returns the [GGroundOverlay] associated to this controller.
   util.GGroundOverlay? get groundOverlay => _groundOverlay;
 
+  /// Sets the [GGroundOverlay] associated to this controller.
+  set groundOverlay(util.GGroundOverlay? value) {
+    _groundOverlay = value;
+    if (_groundOverlay != null && _controller != null) {
+      _addGroundOverlayEvent(_controller);
+    }
+  }
+
   /// Updates the options of the wrapped [GGroundOverlay] object.
   void update(util.GGroundOverlayOptions options) {
     if (_groundOverlay != null) {
       _groundOverlay!.opacity = options.opacity;
       _groundOverlay!.clickable = options.clickable;
       _groundOverlay!.map = options.map;
+      _groundOverlay!.zIndex = options.zIndex;
     }
   }
 

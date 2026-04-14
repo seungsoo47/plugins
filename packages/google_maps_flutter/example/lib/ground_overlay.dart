@@ -32,6 +32,11 @@ class GroundOverlayBody extends StatefulWidget {
 class GroundOverlayBodyState extends State<GroundOverlayBody> {
   GroundOverlayBodyState();
 
+  bool get _isWebOrTizen =>
+      kIsWeb ||
+      (defaultTargetPlatform != TargetPlatform.android &&
+          defaultTargetPlatform != TargetPlatform.iOS);
+
   GoogleMapController? controller;
   GroundOverlay? _groundOverlay;
 
@@ -274,7 +279,7 @@ class GroundOverlayBodyState extends State<GroundOverlayBody> {
                   _groundOverlay == null ? null : () => _changeTransparency(),
               child: const Text('change transparency'),
             ),
-            if (!kIsWeb)
+            if (!_isWebOrTizen)
               TextButton(
                 onPressed: _groundOverlay == null ? null : () => _setBearing(),
                 child: const Text('change bearing'),
@@ -283,26 +288,26 @@ class GroundOverlayBodyState extends State<GroundOverlayBody> {
               onPressed: _groundOverlay == null ? null : () => _toggleVisible(),
               child: const Text('toggle visible'),
             ),
-            if (!kIsWeb)
+            if (!_isWebOrTizen)
               TextButton(
                 onPressed:
                     _groundOverlay == null ? null : () => _changeZIndex(),
                 child: const Text('change zIndex'),
               ),
-            if (!kIsWeb)
+            if (!_isWebOrTizen)
               TextButton(
                 onPressed:
                     _groundOverlay == null ? null : () => _changeAnchor(),
                 child: const Text('change anchor'),
               ),
-            if (!kIsWeb)
+            if (!_isWebOrTizen)
               TextButton(
                 onPressed: _groundOverlay == null ? null : () => _changeType(),
                 child: Text(_placingType == _GroundOverlayPlacing.position
                     ? 'use bounds'
                     : 'use position'),
               ),
-            if (!kIsWeb)
+            if (!_isWebOrTizen)
               TextButton(
                 onPressed: _placingType != _GroundOverlayPlacing.position ||
                         _groundOverlay == null

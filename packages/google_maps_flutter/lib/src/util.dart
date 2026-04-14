@@ -712,11 +712,16 @@ class GMarkerClustererOptions {
 /// This class represents a ground overlay on the map.
 class GGroundOverlay {
   /// GGroundOverlay Constructor.
-  GGroundOverlay(String url, String bounds, [GGroundOverlayOptions? opts]) : id = _gid++ {
+  GGroundOverlay(this.url, this.bounds, [GGroundOverlayOptions? opts])
+      : id = _gid++ {
     _createGroundOverlay(url, bounds, opts);
   }
 
-  Future<void> _createGroundOverlay(String url, String bounds, GGroundOverlayOptions? opts) async {
+  Future<void> _createGroundOverlay(
+    String url,
+    String bounds,
+    GGroundOverlayOptions? opts,
+  ) async {
     final String optionsCode = opts != null ? opts.toString() : '{}';
     await webController!.runJavaScript(
       'var ${toString()} = new google.maps.GroundOverlay("$url", $bounds, $optionsCode);',
@@ -725,6 +730,13 @@ class GGroundOverlay {
 
   /// GGroundOverlay id.
   final int id;
+
+  /// The URL of the image.
+  final String url;
+
+  /// The LatLngBounds of the ground overlay.
+  final String bounds;
+
   static int _gid = 0;
 
   @override
@@ -741,6 +753,9 @@ class GGroundOverlay {
   /// Sets clickable.
   set clickable(bool? clickable) => _setClickable(clickable);
 
+  /// Sets zIndex.
+  set zIndex(num? zIndex) => _setZIndex(zIndex);
+
   Future<void> _setMap(Object? /*GMap?|StreetViewPanorama?*/ map) async {
     await callMethod(this, 'setMap', <Object?>[map]);
   }
@@ -751,6 +766,10 @@ class GGroundOverlay {
 
   Future<void> _setClickable(bool? clickable) async {
     await callMethod(this, 'set', <Object?>['clickable', clickable]);
+  }
+
+  Future<void> _setZIndex(num? zIndex) async {
+    await callMethod(this, 'set', <Object?>['zIndex', zIndex]);
   }
 }
 
@@ -768,10 +787,13 @@ class GGroundOverlayOptions {
   /// The map on which to display the overlay.
   Object? map;
 
+  /// The zIndex compared to other overlays.
+  num? zIndex;
+
   @override
   String toString() {
     final String mapVar = map != null ? 'map' : 'null';
-    return '{opacity:$opacity, clickable:$clickable, map: $mapVar}';
+    return '{opacity:$opacity, clickable:$clickable, map: $mapVar, zIndex:$zIndex}';
   }
 }
 

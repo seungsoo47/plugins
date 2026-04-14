@@ -31,17 +31,28 @@ class GroundOverlaysController extends GeometryController {
     if (groundOverlay.bounds != null) {
       return groundOverlay.bounds!;
     }
-    
+
     final double width = groundOverlay.width!;
     final double height = groundOverlay.height ?? width;
-    
+    final Offset anchor = groundOverlay.anchor ?? const Offset(0.5, 0.5);
+
     const double metersPerDegree = 111320.0;
-    final double latOffset = (height / 2.0) / metersPerDegree;
-    final double lngOffset = (width / 2.0) / (metersPerDegree * cos(groundOverlay.position!.latitude * pi / 180.0));
-    
+    const double latPerMeter = 1.0 / metersPerDegree;
+    final double lngPerMeter =
+        1.0 / (metersPerDegree * cos(groundOverlay.position!.latitude * pi / 180.0));
+
+    final double southLat = groundOverlay.position!.latitude -
+        (height * (1.0 - anchor.dy)) * latPerMeter;
+    final double northLat =
+        groundOverlay.position!.latitude + (height * anchor.dy) * latPerMeter;
+    final double westLng = groundOverlay.position!.longitude -
+        (width * anchor.dx) * lngPerMeter;
+    final double eastLng = groundOverlay.position!.longitude +
+        (width * (1.0 - anchor.dx)) * lngPerMeter;
+
     return LatLngBounds(
-      southwest: LatLng(groundOverlay.position!.latitude - latOffset, groundOverlay.position!.longitude - lngOffset),
-      northeast: LatLng(groundOverlay.position!.latitude + latOffset, groundOverlay.position!.longitude + lngOffset),
+      southwest: LatLng(southLat, westLng),
+      northeast: LatLng(northLat, eastLng),
     );
   }
 
@@ -53,12 +64,15 @@ class GroundOverlaysController extends GeometryController {
     final String bounds = boundsLiteral(_computeBounds(groundOverlay));
     final String url = urlFromMapBitmap(groundOverlay.image);
 
-    final util.GGroundOverlayOptions groundOverlayOptions = util.GGroundOverlayOptions()
-      ..opacity = 1.0 - groundOverlay.transparency
-      ..clickable = groundOverlay.clickable
-      ..map = groundOverlay.visible ? 'map' : null;
+    final util.GGroundOverlayOptions groundOverlayOptions =
+        util.GGroundOverlayOptions()
+          ..opacity = 1.0 - groundOverlay.transparency
+          ..clickable = groundOverlay.clickable
+          ..zIndex = groundOverlay.zIndex
+          ..map = groundOverlay.visible ? 'map' : null;
 
-    final util.GGroundOverlay gGroundOverlay = util.GGroundOverlay(url, bounds, groundOverlayOptions);
+    final util.GGroundOverlay gGroundOverlay =
+        util.GGroundOverlay(url, bounds, groundOverlayOptions);
     final GroundOverlayController controller = GroundOverlayController(
       groundOverlay: gGroundOverlay,
       onTap: () {
@@ -83,12 +97,27 @@ class GroundOverlaysController extends GeometryController {
       return;
     }
 
-    final util.GGroundOverlayOptions groundOverlayOptions = util.GGroundOverlayOptions()
-      ..opacity = 1.0 - groundOverlay.transparency
-      ..clickable = groundOverlay.clickable
-      ..map = groundOverlay.visible ? 'map' : null;
+    final String bounds = boundsLiteral(_computeBounds(groundOverlay));
+    final String url = urlFromMapBitmap(groundOverlay.image);
 
-    controller.update(groundOverlayOptions);
+    final util.GGroundOverlayOptions groundOverlayOptions =
+        util.GGroundOverlayOptions()
+          ..opacity = 1.0 - groundOverlay.transparency
+          ..clickable = groundOverlay.clickable
+          ..zIndex = groundOverlay.zIndex
+          ..map = groundOverlay.visible ? 'map' : null;
+
+    if (controller.groundOverlay!.url != url ||
+        controller.groundOverlay!.bounds != bounds) {
+      _idToGroundOverlayId.remove(controller.groundOverlay!.id);
+      controller.remove();
+      final util.GGroundOverlay gGroundOverlay =
+          util.GGroundOverlay(url, bounds, groundOverlayOptions);
+      controller.groundOverlay = gGroundOverlay;
+      _idToGroundOverlayId[gGroundOverlay.id] = groundOverlay.groundOverlayId;
+    } else {
+      controller.update(groundOverlayOptions);
+    }
   }
 
   /// Removes a set of [GroundOverlayId]s from the cache.
