@@ -19,9 +19,15 @@
 // and strictly opt-in; EWK remains the default backend (see
 // WebViewBackendFactory).
 //
+// The WV engine has two implementations behind the same wv_* surface, and
+// wv_init() picks one from the command line: with --enable-wv-standalone it
+// runs its own implementation, without it every wv_* call is forwarded to
+// its ewk_* counterpart ("wrapper mode", g_use_ewk_api == true). Which one
+// this backend asks for is fixed at construction by `standalone`, because
+// the two modes differ in what the view needs after creation.
 class WvWebViewBackend : public WebViewBackend {
  public:
-  explicit WvWebViewBackend(Delegate* delegate);
+  WvWebViewBackend(Delegate* delegate, bool standalone);
   ~WvWebViewBackend() override = default;
 
   bool Create(double width, double height, void* window,
@@ -76,8 +82,9 @@ class WvWebViewBackend : public WebViewBackend {
   // constructed, and only after WvInternalApiBinding::Initialize() has
   // succeeded. Registers the composite argv via wv_set_arguments() and then
   // calls wv_init() — unlike the EWK path, the arguments must be registered
-  // before engine init.
-  static void GlobalInitialize();
+  // before engine init. `standalone` adds --enable-wv-standalone to that
+  // argv and must match the value passed to the constructor.
+  static void GlobalInitialize(bool standalone);
 
   // Must be called exactly once, after every WvWebViewBackend has been
   // destroyed.
@@ -113,6 +120,7 @@ class WvWebViewBackend : public WebViewBackend {
                       double dy);
 
   Delegate* delegate_;
+  bool standalone_ = true;
   bool scrollbar_enabled_ = true;
   wv_view_h view_ = nullptr;
   void* window_ = nullptr;

@@ -5,6 +5,7 @@
 #include "wv_webview_backend.h"
 
 #include <Eina.h>
+#include <Evas.h>
 #include <glib.h>
 
 #include <algorithm>
@@ -15,6 +16,7 @@
 #include <vector>
 
 #include "buffer_pool.h"
+#include "ewk_internal_api_binding.h"
 #include "log.h"
 
 namespace {
@@ -82,18 +84,23 @@ void CompletePendingTeardown(const std::shared_ptr<PendingTeardown>& pending) {
 
 }  // namespace
 
-WvWebViewBackend::WvWebViewBackend(Delegate* delegate) : delegate_(delegate) {}
+WvWebViewBackend::WvWebViewBackend(Delegate* delegate, bool standalone)
+    : delegate_(delegate), standalone_(standalone) {}
 
-void WvWebViewBackend::GlobalInitialize() {
+void WvWebViewBackend::GlobalInitialize(bool standalone) {
   auto& wv = WvInternalApiBinding::GetInstance();
   // wv_set_arguments() stores the argv used by wv_init(), so it must run
-  // before the engine boots. wv_init() reads --enable-wv-standalone to decide
-  // whether to run the WV implementation.
+  // before the engine boots. --enable-wv-standalone comes last so wrapper mode
+  // can drop it by shortening argc; wv_init() reads that switch to decide
+  // whether to run the WV implementation or forward everything to ewk_*.
   const char* argv[] = {
       "--disable-pinch", "--js-flags=--expose-gc", "--single-process",
       "--no-zygote",     "--enable-wv-standalone",
   };
   int argc = sizeof(argv) / sizeof(argv[0]);
+  if (!standalone) {
+    --argc;
+  }
   // wv_set_arguments() returns a TIZEN_ERROR_* code (0 == success), while
   // wv_init() returns ewk_init()'s reference count (> 0 == success).
   int result = wv.main.SetArguments(argc, argv);
@@ -157,6 +164,16 @@ bool WvWebViewBackend::Create(double width, double height, void* window,
     return false;
   }
   wv.view.FocusSet(view_, 1);
+
+  if (!standalone_) {
+    // Images older than chromium-efl f3b3899 leave a wrapper-mode view
+    // onscreen. Reaching for ewk_* is sound only here, where the handle really
+    // is an Evas_Object; a standalone handle is not. Once the device image
+    // carries f3b3899, drop this block and the factory's wrapper-mode EWK
+    // binding requirement.
+    EwkInternalApiBinding::GetInstance().view.OffscreenRenderingEnabledSet(
+        reinterpret_cast<Evas_Object*>(view_), true);
+  }
 
   wv_context_h context = wv.view.ContextGet(view_);
   wv_cookie_manager_h cookie_manager = wv.context.CookieManagerGet(context);
