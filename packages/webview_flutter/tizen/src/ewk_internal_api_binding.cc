@@ -22,7 +22,7 @@ bool EwkInternalApiBinding::Initialize() {
   }
 
   // ewk_view
-  view.SetBackgroundColor = reinterpret_cast<EwkViewBgColorSetFnPtr>(
+  view.BgColorSet = reinterpret_cast<EwkViewBgColorSetFnPtr>(
       dlsym(handle_, "ewk_view_bg_color_set"));
   view.TouchEventsEnabledSet =
       reinterpret_cast<EwkViewTouchEventsEnabledSetFnPtr>(
@@ -49,7 +49,7 @@ bool EwkInternalApiBinding::Initialize() {
       dlsym(handle_, "ewk_view_ime_window_set"));
   view.KeyEventsEnabledSet = reinterpret_cast<EwkViewKeyEventsEnabledSetFnPtr>(
       dlsym(handle_, "ewk_view_key_events_enabled_set"));
-  view.SupportVideoHoleSet = reinterpret_cast<EwkViewSupportVideoHoleSetFnPtr>(
+  view.SetSupportVideoHole = reinterpret_cast<EwkViewSetSupportVideoHoleFnPtr>(
       dlsym(handle_, "ewk_view_set_support_video_hole"));
 
   view.OnJavaScriptAlert =
@@ -100,12 +100,11 @@ bool EwkInternalApiBinding::Initialize() {
   console_message.SourceGet = reinterpret_cast<EwkConsoleMessageSourceGetFnPtr>(
       dlsym(handle_, "ewk_console_message_source_get"));
 
-  return view.SetBackgroundColor && view.TouchEventsEnabledSet &&
-         view.FeedTouchEvent && view.MouseEventsEnabledSet &&
-         view.FeedMouseDown && view.FeedMouseUp && view.FeedMouseMove &&
-         view.FeedMouseWheel && view.SendKeyEvent &&
+  return view.BgColorSet && view.TouchEventsEnabledSet && view.FeedTouchEvent &&
+         view.MouseEventsEnabledSet && view.FeedMouseDown && view.FeedMouseUp &&
+         view.FeedMouseMove && view.FeedMouseWheel && view.SendKeyEvent &&
          view.OffscreenRenderingEnabledSet && view.ImeWindowSet &&
-         view.KeyEventsEnabledSet && view.SupportVideoHoleSet &&
+         view.KeyEventsEnabledSet && view.SetSupportVideoHole &&
          view.OnJavaScriptAlert && view.OnJavaScriptConfirm &&
          view.OnJavaScriptPrompt && view.JavaScriptAlertReply &&
          view.JavaScriptConfirmReply && view.JavaScriptPromptReply &&

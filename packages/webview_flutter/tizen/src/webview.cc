@@ -570,7 +570,7 @@ bool WebView::InitWebView() {
       webview_instance_, &WebView::OnJavaScriptPromptDialog, this);
 
 #ifdef TV_PROFILE
-  EwkInternalApiBinding::GetInstance().view.SupportVideoHoleSet(
+  EwkInternalApiBinding::GetInstance().view.SetSupportVideoHole(
       webview_instance_, window_, true, false);
 #endif
 
@@ -603,7 +603,7 @@ bool WebView::InitWebView() {
 
 template <typename T>
 void WebView::SetBackgroundColor(const T& color) {
-  EwkInternalApiBinding::GetInstance().view.SetBackgroundColor(
+  EwkInternalApiBinding::GetInstance().view.BgColorSet(
       webview_instance_, color >> 16 & 0xff, color >> 8 & 0xff, color & 0xff,
       color >> 24 & 0xff);
 }
