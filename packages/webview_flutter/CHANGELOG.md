@@ -1,3 +1,8 @@
+## 0.11.0
+
+* Move the native web-engine code behind a `WebViewBackend` interface.
+* Add an experimental WV API backend with standalone and EWK-wrapper modes. The backend is chosen from the Tizen platform version: EWK through 10.0, WV wrapper mode on 10.1, WV standalone from 11.0.
+
 ## 0.10.4
 
 * Fix a black screen issue on Tizen 6.5 TV devices.

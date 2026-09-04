@@ -4,7 +4,7 @@
 
 The Tizen implementation of [`webview_flutter`](https://pub.dev/packages/webview_flutter) for Tizen TV devices.
 
-The WebView widget is backed by the EFL WebKit (EWK) on Tizen.
+The WebView widget is backed by the device's native web engine, either EFL WebKit (EWK) or the newer WV API. See [Web engine backend](#web-engine-backend).
 
 ## Required privileges
 
@@ -23,7 +23,7 @@ This package is not an _endorsed_ implementation of `webview_flutter`. Therefore
 ```yaml
 dependencies:
   webview_flutter: ^4.13.1
-  webview_flutter_tizen: ^0.10.4
+  webview_flutter_tizen: ^0.11.0
 ```
 
 ## Example
@@ -60,6 +60,19 @@ class _WebViewExampleState extends State<WebViewExample> {
 ## Supported devices
 
 This plugin is only supported on Tizen TV devices running Tizen 5.5 or later.
+
+## Web engine backend
+
+The plugin chooses a backend from the platform version reported by the device:
+
+| Tizen version    | Backend                     |
+|------------------|-----------------------------|
+| 10.0 and earlier | EFL WebKit (EWK)            |
+| 10.1             | WV API, EWK wrapper mode    |
+| 11.0 and later   | WV API, standalone mode     |
+
+The WV backends are experimental. `WebViewController.tizenEnginePolicy` has no
+WV equivalent, so it is ignored (with a warning) on Tizen 10.1 and later.
 
 ## Note
 
