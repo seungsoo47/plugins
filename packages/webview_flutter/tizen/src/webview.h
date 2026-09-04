@@ -1,12 +1,10 @@
-// Copyright 2021 Samsung Electronics Co., Ltd. All rights reserved.
+// Copyright 2026 Samsung Electronics Co., Ltd. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef FLUTTER_PLUGIN_WEBVIEW_H_
 #define FLUTTER_PLUGIN_WEBVIEW_H_
 
-#include <EWebKit.h>
-#include <Evas.h>
 #include <flutter/encodable_value.h>
 #include <flutter/method_channel.h>
 #include <flutter/plugin_registrar.h>
@@ -19,7 +17,7 @@
 #include <mutex>
 #include <string>
 
-#include "ewk_internal_api_binding.h"
+#include "webview_backend.h"
 
 typedef flutter::MethodCall<flutter::EncodableValue> FlMethodCall;
 typedef flutter::MethodResult<flutter::EncodableValue> FlMethodResult;
@@ -27,9 +25,8 @@ typedef flutter::MethodChannel<flutter::EncodableValue> FlMethodChannel;
 
 class BufferPool;
 class BufferUnit;
-typedef struct _Ecore_Evas Ecore_Evas;
 
-class WebView : public PlatformView {
+class WebView : public PlatformView, public WebViewBackend::Delegate {
  public:
   WebView(flutter::PluginRegistrar* registrar, int view_id,
           flutter::TextureRegistrar* texture_registrar, double width,
@@ -54,8 +51,6 @@ class WebView : public PlatformView {
 
   void Stop();
 
-  Evas_Object* GetWebViewInstance() { return webview_instance_; }
-
   FlutterDesktopGpuSurfaceDescriptor* ObtainGpuSurface(size_t width,
                                                        size_t height);
 
@@ -74,54 +69,43 @@ class WebView : public PlatformView {
   template <typename T>
   void SetBackgroundColor(const T& color);
 
-  void RegisterJavaScriptChannelName(const std::string& name);
   std::string GetWebViewChannelName();
   std::string GetWebViewControllerChannelName();
   std::string GetNavigationDelegateChannelName();
 
-  bool InitWebView();
+  // WebViewBackend::Delegate overrides.
+  void OnFrameRendered(void* tbm_surface) override;
+  void OnLoadStarted(const std::string& url) override;
+  void OnLoadFinished(const std::string& url) override;
+  void OnProgress(int32_t progress) override;
+  void OnLoadError(int32_t error_code, const std::string& description,
+                   const std::string& failing_url) override;
+  void OnConsoleMessage(const std::string& level,
+                        const std::string& message) override;
+  void OnNavigationPolicyDecide(const std::string& url) override;
+  void OnResponsePolicyDecide(const std::string& url,
+                              int32_t status_code) override;
+  void OnUrlChanged(const std::string& url) override;
+  void OnJavaScriptMessage(const std::string& channel,
+                           const std::string& message) override;
+  void OnJavaScriptAlertDialog(const std::string& message,
+                               const std::string& url) override;
+  void OnJavaScriptConfirmDialog(const std::string& message,
+                                 const std::string& url) override;
+  void OnJavaScriptPromptDialog(const std::string& message,
+                                const std::string& default_text,
+                                const std::string& url) override;
 
-  static Ecore_Evas* GetOffscreenHost();
-  static void FreeOffscreenHost();
-  static void FlushPendingTeardowns();
-
-  static void OnFrameRendered(void* data, Evas_Object* obj, void* event_info);
-  static void OnLoadStarted(void* data, Evas_Object* obj, void* event_info);
-  static void OnLoadFinished(void* data, Evas_Object* obj, void* event_info);
-  static void OnProgress(void* data, Evas_Object* obj, void* event_info);
-  static void OnLoadError(void* data, Evas_Object* obj, void* event_info);
-  static void OnConsoleMessage(void* data, Evas_Object* obj, void* event_info);
-  static void OnNavigationPolicy(void* data, Evas_Object* obj,
-                                 void* event_info);
-  static void OnResponsePolicy(void* data, Evas_Object* obj, void* event_info);
-  static void OnUrlChange(void* data, Evas_Object* obj, void* event_info);
-  static void OnEvaluateJavaScript(Evas_Object* obj, const char* result_value,
-                                   void* user_data);
-  static void OnJavaScriptMessage(Evas_Object* obj, Ewk_Script_Message message);
-  static Eina_Bool OnJavaScriptAlertDialog(Evas_Object* o, const char* message,
-                                           void* data);
-  static Eina_Bool OnJavaScriptConfirmDialog(Evas_Object* o,
-                                             const char* message, void* data);
-  static Eina_Bool OnJavaScriptPromptDialog(Evas_Object* o, const char* message,
-                                            const char* default_text,
-                                            void* data);
-
-  void SendTouchEvent(int type, double x, double y);
-  void SendMouseEvent(int type, int button, double x, double y, double dx,
-                      double dy);
-
-  Evas_Object* webview_instance_ = nullptr;
+  std::unique_ptr<WebViewBackend> backend_;
+  bool webview_created_ = false;
   flutter::TextureRegistrar* texture_registrar_;
   bool engine_policy_ = false;
   double width_ = 0.0;
   double height_ = 0.0;
-  double left_ = 0.0;
-  double top_ = 0.0;
   void* window_ = nullptr;
   BufferUnit* working_surface_ = nullptr;
   BufferUnit* candidate_surface_ = nullptr;
   BufferUnit* rendered_surface_ = nullptr;
-  bool has_navigation_delegate_ = false;
   std::unique_ptr<FlMethodChannel> webview_channel_;
   std::unique_ptr<FlMethodChannel> webview_controller_channel_;
   std::unique_ptr<FlMethodChannel> navigation_delegate_channel_;
@@ -133,8 +117,6 @@ class WebView : public PlatformView {
   // Outlives this WebView so a pending async Dart reply can tell it apart
   // from a destroyed one.
   std::shared_ptr<bool> is_alive_ = std::make_shared<bool>(true);
-  Ewk_Mouse_Button_Type mouse_button_type_ = (Ewk_Mouse_Button_Type)0;
-  bool scrollbar_enabled_ = true;
 };
 
 #endif  // FLUTTER_PLUGIN_WEBVIEW_H_
