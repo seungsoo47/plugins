@@ -17,6 +17,11 @@ EwkInternalApiBinding::~EwkInternalApiBinding() {
 }
 
 bool EwkInternalApiBinding::Initialize() {
+  if (initialized_) {
+    return initialize_result_;
+  }
+  initialized_ = true;
+
   if (!handle_) {
     return false;
   }
@@ -100,17 +105,19 @@ bool EwkInternalApiBinding::Initialize() {
   console_message.SourceGet = reinterpret_cast<EwkConsoleMessageSourceGetFnPtr>(
       dlsym(handle_, "ewk_console_message_source_get"));
 
-  return view.BgColorSet && view.TouchEventsEnabledSet && view.FeedTouchEvent &&
-         view.MouseEventsEnabledSet && view.FeedMouseDown && view.FeedMouseUp &&
-         view.FeedMouseMove && view.FeedMouseWheel && view.SendKeyEvent &&
-         view.OffscreenRenderingEnabledSet && view.ImeWindowSet &&
-         view.KeyEventsEnabledSet && view.SetSupportVideoHole &&
-         view.OnJavaScriptAlert && view.OnJavaScriptConfirm &&
-         view.OnJavaScriptPrompt && view.JavaScriptAlertReply &&
-         view.JavaScriptConfirmReply && view.JavaScriptPromptReply &&
-         view.MainFrameScrollbarVisibleSet && main.SetArguments &&
-         main.SetVersionPolicy && settings.ImePanelEnabledSet &&
-         settings.ForceZoomSet && console_message.LevelGet &&
-         console_message.TextGet && console_message.LineGet &&
-         console_message.SourceGet;
+  initialize_result_ =
+      view.BgColorSet && view.TouchEventsEnabledSet && view.FeedTouchEvent &&
+      view.MouseEventsEnabledSet && view.FeedMouseDown && view.FeedMouseUp &&
+      view.FeedMouseMove && view.FeedMouseWheel && view.SendKeyEvent &&
+      view.OffscreenRenderingEnabledSet && view.ImeWindowSet &&
+      view.KeyEventsEnabledSet && view.SetSupportVideoHole &&
+      view.OnJavaScriptAlert && view.OnJavaScriptConfirm &&
+      view.OnJavaScriptPrompt && view.JavaScriptAlertReply &&
+      view.JavaScriptConfirmReply && view.JavaScriptPromptReply &&
+      view.MainFrameScrollbarVisibleSet && main.SetArguments &&
+      main.SetVersionPolicy && settings.ImePanelEnabledSet &&
+      settings.ForceZoomSet && console_message.LevelGet &&
+      console_message.TextGet && console_message.LineGet &&
+      console_message.SourceGet;
+  return initialize_result_;
 }

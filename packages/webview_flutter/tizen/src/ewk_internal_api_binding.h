@@ -172,6 +172,8 @@ class EwkInternalApiBinding {
   EwkInternalApiBinding(const EwkInternalApiBinding&) = delete;
   EwkInternalApiBinding& operator=(const EwkInternalApiBinding&) = delete;
 
+  // Resolves every symbol, and returns true only if all of them were found.
+  // Safe to call more than once — the first result is cached.
   bool Initialize();
 
   EwkViewProcTable view;
@@ -183,6 +185,8 @@ class EwkInternalApiBinding {
   EwkInternalApiBinding();
 
   void* handle_ = nullptr;
+  bool initialized_ = false;
+  bool initialize_result_ = false;
 };
 
 #endif  // FLUTTER_PLUGIN_EWK_INTERNAL_API_BINDING_H_

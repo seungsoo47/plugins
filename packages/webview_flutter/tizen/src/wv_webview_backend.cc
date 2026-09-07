@@ -16,7 +16,6 @@
 #include <vector>
 
 #include "buffer_pool.h"
-#include "ewk_internal_api_binding.h"
 #include "log.h"
 
 namespace {
@@ -84,10 +83,9 @@ void CompletePendingTeardown(const std::shared_ptr<PendingTeardown>& pending) {
 
 }  // namespace
 
-WvWebViewBackend::WvWebViewBackend(Delegate* delegate, bool standalone)
-    : delegate_(delegate), standalone_(standalone) {}
+WvWebViewBackend::WvWebViewBackend(Delegate* delegate) : delegate_(delegate) {}
 
-void WvWebViewBackend::GlobalInitialize(bool standalone) {
+bool WvWebViewBackend::GlobalInitialize(bool standalone) {
   auto& wv = WvInternalApiBinding::GetInstance();
   // wv_set_arguments() stores the argv used by wv_init(), so it must run
   // before the engine boots. --enable-wv-standalone comes last so wrapper mode
@@ -110,9 +108,10 @@ void WvWebViewBackend::GlobalInitialize(bool standalone) {
   result = wv.main.Init();
   if (result <= 0) {
     LOG_WARN("wv_init() returned %d.", result);
-  } else {
-    LOG_INFO("wv_init() returned %d.", result);
+    return false;
   }
+  LOG_INFO("wv_init() returned %d.", result);
+  return true;
 }
 
 void WvWebViewBackend::GlobalShutdown() {
@@ -164,16 +163,6 @@ bool WvWebViewBackend::Create(double width, double height, void* window,
     return false;
   }
   wv.view.FocusSet(view_, 1);
-
-  if (!standalone_) {
-    // Images older than chromium-efl f3b3899 leave a wrapper-mode view
-    // onscreen. Reaching for ewk_* is sound only here, where the handle really
-    // is an Evas_Object; a standalone handle is not. Once the device image
-    // carries f3b3899, drop this block and the factory's wrapper-mode EWK
-    // binding requirement.
-    EwkInternalApiBinding::GetInstance().view.OffscreenRenderingEnabledSet(
-        reinterpret_cast<Evas_Object*>(view_), true);
-  }
 
   wv_context_h context = wv.view.ContextGet(view_);
   wv_cookie_manager_h cookie_manager = wv.context.CookieManagerGet(context);
