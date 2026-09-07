@@ -5,6 +5,7 @@
 #include "ewk_webview_backend.h"
 
 #include <Ecore_Evas.h>
+#include <Ecore_Input.h>
 #include <glib.h>
 
 #include <algorithm>
@@ -37,6 +38,36 @@ std::string ConvertLogLevelToString(Ewk_Console_Message_Level level) {
     default:
       return "log";
   }
+}
+
+// Evas_Event_Key_Down/Up::modifiers and ::locks are Evas_Modifier*/Evas_Lock*
+// handles, not plain bitmasks, so SendKey()'s raw Ecore-origin `modifiers`
+// bitmask (from Ecore_Wl2 in the embedder) has to be replayed onto the
+// view's own Evas canvas via evas_key_modifier_on/off() before it can be
+// read back in the form the event structs expect.
+void SyncEvasModifiers(Evas* evas, uint32_t modifiers) {
+  auto set_modifier = [evas](const char* name, bool on) {
+    if (on) {
+      evas_key_modifier_on(evas, name);
+    } else {
+      evas_key_modifier_off(evas, name);
+    }
+  };
+  set_modifier("Shift", modifiers & ECORE_EVENT_MODIFIER_SHIFT);
+  set_modifier("Control", modifiers & ECORE_EVENT_MODIFIER_CTRL);
+  set_modifier("Alt", modifiers & ECORE_EVENT_MODIFIER_ALT);
+  set_modifier("Super", modifiers & ECORE_EVENT_MODIFIER_WIN);
+  set_modifier("Hyper", modifiers & ECORE_EVENT_MODIFIER_ALTGR);
+
+  auto set_lock = [evas](const char* name, bool on) {
+    if (on) {
+      evas_key_lock_on(evas, name);
+    } else {
+      evas_key_lock_off(evas, name);
+    }
+  };
+  set_lock("Caps_Lock", modifiers & ECORE_EVENT_LOCK_CAPS);
+  set_lock("Num_Lock", modifiers & ECORE_EVENT_LOCK_NUM);
 }
 
 // Views whose evas_object_del() is still pending. FlushPendingTeardowns()
@@ -368,16 +399,26 @@ bool EwkWebViewBackend::SendKey(const char* key, const char* string,
     return false;
   }
 
+  Evas* evas = evas_object_evas_get(view_);
+  SyncEvasModifiers(evas, modifiers);
+  Evas_Modifier* evas_modifiers =
+      const_cast<Evas_Modifier*>(evas_key_modifier_get(evas));
+  Evas_Lock* evas_locks = const_cast<Evas_Lock*>(evas_key_lock_get(evas));
+
   // TODO(swift-kim): Deal with other members of the structure.
   if (is_down) {
     Evas_Event_Key_Down down_event = {};
     down_event.key = key;
     down_event.string = string;
+    down_event.modifiers = evas_modifiers;
+    down_event.locks = evas_locks;
     EwkInternalApiBinding::GetInstance().view.SendKeyEvent(view_, &down_event,
                                                            is_down);
   } else {
     Evas_Event_Key_Up up_event = {};
     up_event.key = key;
+    up_event.modifiers = evas_modifiers;
+    up_event.locks = evas_locks;
     up_event.string = string;
     EwkInternalApiBinding::GetInstance().view.SendKeyEvent(view_, &up_event,
                                                            is_down);

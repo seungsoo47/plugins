@@ -38,6 +38,42 @@ std::string ConvertLogLevelToString(wv_console_message_level_e level) {
   }
 }
 
+enum ModifierBit : unsigned int {
+  kModifierShift = 0x0001,
+  kModifierCtrl = 0x0002,
+  kModifierAlt = 0x0004,
+  kModifierWin = 0x0008,
+  kModifierAltGr = 0x0400,
+  kLockCaps = 0x0200,
+  kLockNum = 0x0100,
+};
+
+wv_modifier_e ConvertModifiers(unsigned int modifiers) {
+  unsigned int wv_modifiers = WV_MODIFIER_NONE;
+  if (modifiers & kModifierShift) {
+    wv_modifiers |= WV_MODIFIER_SHIFT;
+  }
+  if (modifiers & kModifierCtrl) {
+    wv_modifiers |= WV_MODIFIER_CONTROL;
+  }
+  if (modifiers & kModifierAlt) {
+    wv_modifiers |= WV_MODIFIER_ALT;
+  }
+  if (modifiers & kModifierWin) {
+    wv_modifiers |= WV_MODIFIER_SUPER;
+  }
+  if (modifiers & kModifierAltGr) {
+    wv_modifiers |= WV_MODIFIER_HYPER;
+  }
+  if (modifiers & kLockCaps) {
+    wv_modifiers |= WV_MODIFIER_CAPS_LOCK;
+  }
+  if (modifiers & kLockNum) {
+    wv_modifiers |= WV_MODIFIER_NUM_LOCK;
+  }
+  return static_cast<wv_modifier_e>(wv_modifiers);
+}
+
 // Views whose wv_view_destroy() has not run yet. The teardown closure runs
 // late (via g_timeout, after texture unregistration), so
 // FlushPendingTeardowns() has to drain this before wv_shutdown().
@@ -373,6 +409,7 @@ bool WvWebViewBackend::SendKey(const char* key, const char* string,
   key_event.key = key;
   key_event.string = string;
   key_event.compose = compose;
+  key_event.modifiers = ConvertModifiers(modifiers);
   key_event.key_code = scan_code;
   wv.view.SendKeyEvent(view_, &key_event, is_down ? 1 : 0);
   return true;
