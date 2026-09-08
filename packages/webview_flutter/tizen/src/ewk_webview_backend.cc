@@ -37,11 +37,6 @@ std::string ConvertLogLevelToString(Ewk_Console_Message_Level level) {
   }
 }
 
-// Evas_Event_Key_Down/Up::modifiers and ::locks are Evas_Modifier*/Evas_Lock*
-// handles, not plain bitmasks, so SendKey()'s raw Ecore-origin `modifiers`
-// bitmask (from Ecore_Wl2 in the embedder) has to be replayed onto the
-// view's own Evas canvas via evas_key_modifier_on/off() before it can be
-// read back in the form the event structs expect.
 void SyncEvasModifiers(Evas* evas, uint32_t modifiers) {
   auto set_modifier = [evas](const char* name, bool on) {
     if (on) {
@@ -69,8 +64,6 @@ void SyncEvasModifiers(Evas* evas, uint32_t modifiers) {
 
 Ecore_Evas* g_offscreen_host = nullptr;
 
-// FlushPendingTeardowns() drains this before ewk_shutdown(), which fatally
-// CHECKs if any Ewk_View is still alive.
 PendingTeardownRegistry<Evas_Object*> g_pending_teardowns;
 
 }  // namespace
@@ -446,8 +439,8 @@ std::string EwkWebViewBackend::GetCurrentUrl() {
 void EwkWebViewBackend::EvaluateJavaScript(
     const std::string& javascript,
     std::function<void(bool success, const char* result_value)> callback) {
-  auto* callback_ptr = new std::function<void(bool, const char*)>(
-      std::move(callback));
+  auto* callback_ptr =
+      new std::function<void(bool, const char*)>(std::move(callback));
   if (!ewk_view_script_execute(view_, javascript.c_str(),
                                &EwkWebViewBackend::OnEvaluateJavaScript,
                                callback_ptr)) {
@@ -641,9 +634,6 @@ void EwkWebViewBackend::OnEvaluateJavaScript(Evas_Object* obj,
 void EwkWebViewBackend::OnJavaScriptMessage(Evas_Object* obj,
                                             Ewk_Script_Message message) {
   if (obj) {
-    // The data key is removed in PrepareTeardown(), so a message arriving
-    // during the deferred teardown yields nullptr here rather than a
-    // dangling pointer.
     EwkWebViewBackend* backend = static_cast<EwkWebViewBackend*>(
         evas_object_data_get(obj, kEwkInstance));
     if (backend) {

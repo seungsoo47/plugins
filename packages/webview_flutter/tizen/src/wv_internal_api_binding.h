@@ -9,10 +9,6 @@
 
 #include <optional>
 
-// The WV headers are not in the plugin's build sysroot, so the types below
-// mirror chromium-efl/tizen_src/wv/integration/public/ (C ABI) and every
-// function is resolved with dlsym(), exactly like EwkInternalApiBinding.
-
 typedef struct wv_view_s* wv_view_h;
 typedef struct wv_context_s* wv_context_h;
 typedef struct wv_settings_s* wv_settings_h;
@@ -339,8 +335,6 @@ class WvInternalApiBinding {
   WvInternalApiBinding(const WvInternalApiBinding&) = delete;
   WvInternalApiBinding& operator=(const WvInternalApiBinding&) = delete;
 
-  // Resolves every symbol, and returns true only if all of them were found.
-  // Safe to call more than once — the first result is cached.
   bool Initialize();
 
   WvMainProcTable main;

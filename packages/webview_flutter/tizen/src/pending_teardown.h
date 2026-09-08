@@ -17,16 +17,9 @@
 #include "buffer_pool.h"
 #include "log.h"
 
-// Tracks views whose native destroy call has not run yet, shared by the EWK
-// and WV backends (both defer that call until after texture unregistration,
-// via g_timeout, and both must drain this before their engine shuts down —
-// EWK's ewk_shutdown() fatally CHECKs if any Ewk_View is still alive).
 template <typename Handle>
 class PendingTeardownRegistry {
  public:
-  // Registers `instance` for deferred teardown and returns a closure that
-  // completes it by calling `destroy(instance)` (unless already completed,
-  // e.g. by a Flush() deadline).
   std::function<void()> Prepare(Handle instance,
                                 std::shared_ptr<BufferPool> pool,
                                 void (*destroy)(Handle)) {
@@ -41,8 +34,6 @@ class PendingTeardownRegistry {
     return [this, pending]() { Complete(pending); };
   }
 
-  // Pumps the default main context until every pending teardown completes on
-  // its own, forcing any still left after a 2s deadline.
   void Flush() {
     constexpr gint64 kDeadlineUsec = 2 * G_USEC_PER_SEC;
     const gint64 deadline = g_get_monotonic_time() + kDeadlineUsec;

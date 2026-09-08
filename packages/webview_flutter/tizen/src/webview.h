@@ -73,7 +73,6 @@ class WebView : public PlatformView, public WebViewBackend::Delegate {
   std::string GetWebViewControllerChannelName();
   std::string GetNavigationDelegateChannelName();
 
-  // WebViewBackend::Delegate overrides.
   void OnFrameRendered(void* tbm_surface) override;
   void OnLoadStarted(const std::string& url) override;
   void OnLoadFinished(const std::string& url) override;

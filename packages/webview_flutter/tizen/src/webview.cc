@@ -177,12 +177,8 @@ void WebView::Dispose() {
     pool = std::move(tbm_pool_);
   }
 
-  // |teardown| captures only backend-owned state, never |this|, so it stays
-  // safe to run after this WebView has been destroyed.
   std::function<void()> teardown = backend_->PrepareTeardown(std::move(pool));
 
-  // UnregisterTexture()'s completion callback fires on the render thread,
-  // so hop back to the main loop before completing the deferred delete.
   texture_registrar_->UnregisterTexture(GetTextureId(), [teardown]() {
     // Must stay a high-priority timeout: g_idle_add() runs too late and the
     // delete then races the raster thread on the TV emulator.

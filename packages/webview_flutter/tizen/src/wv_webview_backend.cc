@@ -74,15 +74,8 @@ wv_modifier_e ConvertModifiers(unsigned int modifiers) {
   return static_cast<wv_modifier_e>(wv_modifiers);
 }
 
-// The teardown closure runs late (via g_timeout, after texture
-// unregistration), so FlushPendingTeardowns() has to drain this before
-// wv_shutdown().
 PendingTeardownRegistry<wv_view_h> g_pending_teardowns;
 
-// wv_view_script_message_cb carries no user_data parameter, so JS-channel
-// messages are routed back to their backend through this registry. The entry
-// is removed in PrepareTeardown(), so a message arriving during the deferred
-// teardown is dropped instead of dereferencing a dangling pointer.
 std::mutex g_view_registry_mutex;
 std::map<wv_view_h, WvWebViewBackend*> g_view_registry;
 
@@ -240,10 +233,7 @@ std::function<void()> WvWebViewBackend::PrepareTeardown(
       });
 }
 
-void WvWebViewBackend::Offset(double left, double top) {
-  // No-op: neither mode offsets input by the view origin, so adding left_/top_
-  // compensation (as the EWK backend does) would break tap accuracy.
-}
+void WvWebViewBackend::Offset(double left, double top) {}
 
 void WvWebViewBackend::Resize(double width, double height) {
   WvInternalApiBinding::GetInstance().view.Resize(
@@ -282,8 +272,6 @@ void WvWebViewBackend::SendTouchEvent(int event_type, double x, double y) {
   point.y = static_cast<int>(y);
   point.state = state;
 
-  // The implementation copies the point values, so a stack-allocated point
-  // and an immediately freed list are safe (wv_view_private.cc).
   GList* points = g_list_append(nullptr, &point);
   WvInternalApiBinding::GetInstance().view.FeedTouchEvent(
       view_, touch_event_type, points, WV_MODIFIER_NONE);
@@ -381,15 +369,11 @@ bool WvWebViewBackend::LoadUrlRequest(
     const std::string& url, int32_t method,
     const std::map<std::string, std::string>& headers,
     const std::vector<uint8_t>& body) {
-  // Map the Dart-side integer explicitly rather than relying on the WV and
-  // EWK method enums happening to agree.
   wv_http_method_e wv_method = WV_HTTP_METHOD_GET;
   if (method == 1) {
     wv_method = WV_HTTP_METHOD_POST;
   }
 
-  // Standalone also consumes the headers parameter as an Eina_Hash*
-  // (wv_view_private.cc:192), so the EWK header-building code is reused.
   Eina_Hash* wv_headers = eina_hash_new(
       [](const void* key) -> unsigned int {
         return key ? strlen(static_cast<const char*>(key)) + 1 : 0;
@@ -544,8 +528,6 @@ bool WvWebViewBackend::ClearCookies() {
 void WvWebViewBackend::OnFrameRendered(wv_view_h obj, void* event_info,
                                        void* user_data) {
   if (event_info) {
-    // event_info is a tbm_surface_h owned by the engine; it is handed to
-    // the delegate as-is and must never be destroyed here.
     static_cast<WvWebViewBackend*>(user_data)->delegate_->OnFrameRendered(
         event_info);
   }
@@ -555,7 +537,6 @@ void WvWebViewBackend::OnLoadStarted(wv_view_h obj, void* event_info,
                                      void* user_data) {
   WvWebViewBackend* backend = static_cast<WvWebViewBackend*>(user_data);
   auto& wv = WvInternalApiBinding::GetInstance();
-  // The engine resets scrollbar visibility on every navigation.
   wv.view.MainFrameScrollbarVisibleSet(backend->view_,
                                        backend->scrollbar_enabled_);
   const char* url = wv.view.UrlGet(backend->view_);

@@ -75,12 +75,8 @@ class EwkWebViewBackend : public WebViewBackend {
   void SetScrollbarVisible(bool visible) override;
   bool ClearCookies() override;
 
-  // Must be called exactly once, before any EwkWebViewBackend is
-  // constructed.
   static void GlobalInitialize();
 
-  // Must be called exactly once, after every EwkWebViewBackend has been
-  // destroyed.
   static void GlobalShutdown();
 
  private:

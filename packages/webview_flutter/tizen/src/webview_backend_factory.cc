@@ -17,11 +17,8 @@ namespace {
 
 enum class BackendKind { kEwk, kEwkWrapper, kWvStandalone };
 
-// EWK through Tizen 10.0, EWK wrapper mode on 10.1, WV standalone from 11.0.
 BackendKind DefaultBackendForPlatform() {
   int major = 0, minor = 0;
-  // Same source as flutter_tizen's apiVersion getter (dart:io
-  // Platform.environment['TIZEN_API_VERSION']).
   if (const char* value = std::getenv("TIZEN_API_VERSION")) {
     std::sscanf(value, "%d.%d", &major, &minor);
   }
@@ -34,8 +31,6 @@ BackendKind DefaultBackendForPlatform() {
   return BackendKind::kEwk;
 }
 
-// Cached after the first read so InitializeEngine(), Create(), and
-// ShutdownEngine() always agree on one answer for the process lifetime.
 BackendKind SelectedBackend() {
   static const BackendKind kind = []() {
     BackendKind selected = DefaultBackendForPlatform();
@@ -61,7 +56,6 @@ std::unique_ptr<WebViewBackend> WebViewBackendFactory::Create(
       LOG_ERROR("WV engine is not initialized; cannot create WebView.");
       return nullptr;
     }
-    // Failing here must not fall back to EWK silently.
     if (!WvInternalApiBinding::GetInstance().Initialize()) {
       LOG_ERROR("Failed to initialize WV APIs.");
       return nullptr;

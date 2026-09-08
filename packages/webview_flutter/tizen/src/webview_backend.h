@@ -16,8 +16,6 @@ class BufferPool;
 
 class WebViewBackend {
  public:
-  // Implemented by `WebView`, which owns all method-channel code; backends
-  // report native events through these instead of calling Flutter directly.
   class Delegate {
    public:
     virtual ~Delegate() {}
@@ -47,17 +45,9 @@ class WebViewBackend {
 
   virtual ~WebViewBackend() {}
 
-  // Creates the underlying native view. Must be called before any other
-  // method except the constructor. Returns false on failure (e.g. the
-  // offscreen host could not be created).
   virtual bool Create(double width, double height, void* window,
                       bool engine_policy) = 0;
 
-  // Detaches every callback the backend registered and stops the page.
-  // Returns a closure that finishes the teardown (freeing the native view
-  // once it is safe to do so); the closure captures only backend-owned
-  // state, never `this` or a `WebView*`, so it stays safe to run after this
-  // `WebViewBackend` has been destroyed.
   virtual std::function<void()> PrepareTeardown(
       std::shared_ptr<BufferPool> pool) = 0;
 

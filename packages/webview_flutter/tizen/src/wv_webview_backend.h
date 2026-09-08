@@ -15,15 +15,6 @@
 #include "webview_backend.h"
 #include "wv_internal_api_binding.h"
 
-// WebViewBackend implementation on top of the WV public API. Experimental
-// and strictly opt-in; EWK remains the default backend (see
-// WebViewBackendFactory).
-//
-// The WV engine has two implementations behind the same wv_* surface, and
-// wv_init() picks one from the command line: with --enable-wv-standalone it
-// runs its own implementation, without it every wv_* call is forwarded to
-// its ewk_* counterpart ("wrapper mode", g_use_ewk_api == true). Which one
-// runs is decided once, process-wide, by GlobalInitialize()'s `standalone`.
 class WvWebViewBackend : public WebViewBackend {
  public:
   explicit WvWebViewBackend(Delegate* delegate);
@@ -79,16 +70,8 @@ class WvWebViewBackend : public WebViewBackend {
   void SetScrollbarVisible(bool visible) override;
   bool ClearCookies() override;
 
-  // Must be called exactly once, before any WvWebViewBackend is
-  // constructed, and only after WvInternalApiBinding::Initialize() has
-  // succeeded. Registers the composite argv via wv_set_arguments() and then
-  // calls wv_init() — unlike the EWK path, the arguments must be registered
-  // before engine init. `standalone` adds --enable-wv-standalone to that
-  // argv. Returns whether wv_init() itself succeeded.
   static bool GlobalInitialize(bool standalone);
 
-  // Must be called exactly once, after every WvWebViewBackend has been
-  // destroyed.
   static void GlobalShutdown();
 
  private:
