@@ -444,14 +444,15 @@ std::string EwkWebViewBackend::GetCurrentUrl() {
 }
 
 void EwkWebViewBackend::EvaluateJavaScript(
-    const std::string& javascript, std::function<void(const char*)> callback) {
-  auto* callback_ptr =
-      new std::function<void(const char*)>(std::move(callback));
+    const std::string& javascript,
+    std::function<void(bool success, const char* result_value)> callback) {
+  auto* callback_ptr = new std::function<void(bool, const char*)>(
+      std::move(callback));
   if (!ewk_view_script_execute(view_, javascript.c_str(),
                                &EwkWebViewBackend::OnEvaluateJavaScript,
                                callback_ptr)) {
     LOG_WARN("ewk_view_script_execute failed.");
-    (*callback_ptr)(nullptr);
+    (*callback_ptr)(false, nullptr);
     delete callback_ptr;
   }
 }
@@ -631,8 +632,9 @@ void EwkWebViewBackend::OnUrlChange(void* data, Evas_Object* obj,
 void EwkWebViewBackend::OnEvaluateJavaScript(Evas_Object* obj,
                                              const char* result_value,
                                              void* user_data) {
-  auto* callback = static_cast<std::function<void(const char*)>*>(user_data);
-  (*callback)(result_value);
+  auto* callback =
+      static_cast<std::function<void(bool, const char*)>*>(user_data);
+  (*callback)(true, result_value);
   delete callback;
 }
 

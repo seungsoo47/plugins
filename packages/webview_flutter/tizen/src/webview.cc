@@ -375,8 +375,10 @@ void WebView::HandleWebViewMethodCall(const FlMethodCall& method_call,
     if (javascript) {
       FlMethodResult* raw_result = result.release();
       backend_->EvaluateJavaScript(
-          *javascript, [raw_result](const char* result_value) {
-            if (result_value) {
+          *javascript, [raw_result](bool success, const char* result_value) {
+            if (!success) {
+              raw_result->Error("Failed to execute JavaScript");
+            } else if (result_value) {
               raw_result->Success(flutter::EncodableValue(result_value));
             } else {
               raw_result->Success();

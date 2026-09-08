@@ -88,7 +88,8 @@ class WebViewBackend {
   virtual std::string GetCurrentUrl() = 0;
   virtual void EvaluateJavaScript(
       const std::string& javascript,
-      std::function<void(const char*)> callback) = 0;
+      std::function<void(bool success, const char* result_value)> callback) =
+      0;
   virtual void RegisterJavaScriptChannel(const std::string& name) = 0;
   virtual void ClearCache() = 0;
   virtual void ClearLocalStorage() = 0;

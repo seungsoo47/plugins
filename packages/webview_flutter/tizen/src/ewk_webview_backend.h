@@ -54,8 +54,10 @@ class EwkWebViewBackend : public WebViewBackend {
   void GoForward() override;
   void Reload() override;
   std::string GetCurrentUrl() override;
-  void EvaluateJavaScript(const std::string& javascript,
-                          std::function<void(const char*)> callback) override;
+  void EvaluateJavaScript(
+      const std::string& javascript,
+      std::function<void(bool success, const char* result_value)> callback)
+      override;
   void RegisterJavaScriptChannel(const std::string& name) override;
   void ClearCache() override;
   void ClearLocalStorage() override;

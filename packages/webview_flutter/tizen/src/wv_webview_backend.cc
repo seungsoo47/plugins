@@ -444,14 +444,15 @@ std::string WvWebViewBackend::GetCurrentUrl() {
 }
 
 void WvWebViewBackend::EvaluateJavaScript(
-    const std::string& javascript, std::function<void(const char*)> callback) {
+    const std::string& javascript,
+    std::function<void(bool success, const char* result_value)> callback) {
   auto* callback_ptr =
-      new std::function<void(const char*)>(std::move(callback));
+      new std::function<void(bool, const char*)>(std::move(callback));
   if (!WvInternalApiBinding::GetInstance().view.ScriptExecute(
           view_, javascript.c_str(), &WvWebViewBackend::OnEvaluateJavaScript,
           callback_ptr)) {
     LOG_WARN("wv_view_script_execute failed.");
-    (*callback_ptr)(nullptr);
+    (*callback_ptr)(false, nullptr);
     delete callback_ptr;
   }
 }
@@ -642,8 +643,9 @@ void WvWebViewBackend::OnUrlChange(wv_view_h obj, void* event_info,
 void WvWebViewBackend::OnEvaluateJavaScript(wv_view_h obj,
                                             const char* result_value,
                                             void* user_data) {
-  auto* callback = static_cast<std::function<void(const char*)>*>(user_data);
-  (*callback)(result_value);
+  auto* callback =
+      static_cast<std::function<void(bool, const char*)>*>(user_data);
+  (*callback)(true, result_value);
   delete callback;
 }
 
