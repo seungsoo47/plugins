@@ -7,6 +7,8 @@
 
 #include <glib.h>
 
+#include <optional>
+
 // The WV headers are not in the plugin's build sysroot, so the types below
 // mirror chromium-efl/tizen_src/wv/integration/public/ (C ABI) and every
 // function is resolved with dlsym(), exactly like EwkInternalApiBinding.
@@ -354,8 +356,7 @@ class WvInternalApiBinding {
   WvInternalApiBinding();
 
   void* handle_ = nullptr;
-  bool initialized_ = false;
-  bool initialize_result_ = false;
+  std::optional<bool> initialize_result_;
 };
 
 #endif  // FLUTTER_PLUGIN_WV_INTERNAL_API_BINDING_H_

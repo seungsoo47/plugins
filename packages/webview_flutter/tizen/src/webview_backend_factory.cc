@@ -4,8 +4,6 @@
 
 #include "webview_backend_factory.h"
 
-#include <system_info.h>
-
 #include <cstdio>
 #include <cstdlib>
 
@@ -21,14 +19,11 @@ enum class BackendKind { kEwk, kEwkWrapper, kWvStandalone };
 
 // EWK through Tizen 10.0, EWK wrapper mode on 10.1, WV standalone from 11.0.
 BackendKind DefaultBackendForPlatform() {
-  char* value = nullptr;
   int major = 0, minor = 0;
-  if (system_info_get_platform_string(
-          "http://tizen.org/feature/platform.version", &value) ==
-          SYSTEM_INFO_ERROR_NONE &&
-      value) {
+  // Same source as flutter_tizen's apiVersion getter (dart:io
+  // Platform.environment['TIZEN_API_VERSION']).
+  if (const char* value = std::getenv("TIZEN_API_VERSION")) {
     std::sscanf(value, "%d.%d", &major, &minor);
-    free(value);
   }
   if (major >= 11) {
     return BackendKind::kWvStandalone;

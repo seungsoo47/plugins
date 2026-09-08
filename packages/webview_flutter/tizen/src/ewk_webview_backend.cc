@@ -6,17 +6,14 @@
 
 #include <Ecore_Evas.h>
 #include <Ecore_Input.h>
-#include <glib.h>
 
-#include <algorithm>
-#include <atomic>
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
-#include <mutex>
-#include <vector>
 
 #include "buffer_pool.h"
 #include "log.h"
+#include "pending_teardown.h"
 
 namespace {
 
@@ -70,43 +67,11 @@ void SyncEvasModifiers(Evas* evas, uint32_t modifiers) {
   set_lock("Num_Lock", modifiers & ECORE_EVENT_LOCK_NUM);
 }
 
-// Views whose evas_object_del() is still pending. FlushPendingTeardowns()
-// drains this before ewk_shutdown(), which fatally CHECKs if any Ewk_View is
-// still alive.
-struct PendingTeardown {
-  Evas_Object* instance = nullptr;
-  std::shared_ptr<BufferPool> pool;
-  std::atomic<bool> completed{false};
-};
-
-std::mutex g_pending_teardown_mutex;
-std::vector<std::shared_ptr<PendingTeardown>> g_pending_teardowns;
-
 Ecore_Evas* g_offscreen_host = nullptr;
 
-std::shared_ptr<PendingTeardown> RegisterPendingTeardown(
-    Evas_Object* instance, std::shared_ptr<BufferPool> pool) {
-  auto pending = std::make_shared<PendingTeardown>();
-  pending->instance = instance;
-  pending->pool = std::move(pool);
-  std::lock_guard<std::mutex> lock(g_pending_teardown_mutex);
-  g_pending_teardowns.push_back(pending);
-  return pending;
-}
-
-void CompletePendingTeardown(const std::shared_ptr<PendingTeardown>& pending) {
-  bool expected = false;
-  if (pending->completed.compare_exchange_strong(expected, true) &&
-      pending->instance) {
-    evas_object_del(pending->instance);
-  }
-  std::lock_guard<std::mutex> lock(g_pending_teardown_mutex);
-  auto it = std::find(g_pending_teardowns.begin(), g_pending_teardowns.end(),
-                      pending);
-  if (it != g_pending_teardowns.end()) {
-    g_pending_teardowns.erase(it);
-  }
-}
+// FlushPendingTeardowns() drains this before ewk_shutdown(), which fatally
+// CHECKs if any Ewk_View is still alive.
+PendingTeardownRegistry<Evas_Object*> g_pending_teardowns;
 
 }  // namespace
 
@@ -135,34 +100,7 @@ void EwkWebViewBackend::FreeOffscreenHost() {
   }
 }
 
-void EwkWebViewBackend::FlushPendingTeardowns() {
-  constexpr gint64 kDeadlineUsec = 2 * G_USEC_PER_SEC;
-  const gint64 deadline = g_get_monotonic_time() + kDeadlineUsec;
-  for (;;) {
-    bool deadline_passed = g_get_monotonic_time() >= deadline;
-    std::vector<std::shared_ptr<PendingTeardown>> snapshot;
-    {
-      std::lock_guard<std::mutex> lock(g_pending_teardown_mutex);
-      if (g_pending_teardowns.empty()) {
-        return;
-      }
-      if (deadline_passed) {
-        snapshot = g_pending_teardowns;
-      }
-    }
-    if (deadline_passed) {
-      LOG_WARN("Forcing %zu pending teardown(s) past deadline",
-               snapshot.size());
-      for (auto& pending : snapshot) {
-        CompletePendingTeardown(pending);
-      }
-      continue;
-    }
-    if (!g_main_context_iteration(g_main_context_default(), FALSE)) {
-      g_usleep(1000);
-    }
-  }
-}
+void EwkWebViewBackend::FlushPendingTeardowns() { g_pending_teardowns.Flush(); }
 
 bool EwkWebViewBackend::Create(double width, double height, void* window,
                                bool engine_policy) {
@@ -250,7 +188,8 @@ bool EwkWebViewBackend::Create(double width, double height, void* window,
   evas_object_smart_callback_add(view_, "url,changed",
                                  &EwkWebViewBackend::OnUrlChange, this);
 
-  evas_object_resize(view_, width, height);
+  evas_object_resize(view_, static_cast<int>(std::round(width)),
+                     static_cast<int>(std::round(height)));
   evas_object_show(view_);
 
   evas_object_data_set(view_, kEwkInstance, this);
@@ -295,8 +234,9 @@ std::function<void()> EwkWebViewBackend::PrepareTeardown(
     ewk_view_suspend(instance);
   }
 
-  auto pending = RegisterPendingTeardown(instance, std::move(pool));
-  return [pending]() { CompletePendingTeardown(pending); };
+  return g_pending_teardowns.Prepare(
+      instance, std::move(pool),
+      [](Evas_Object* view) { evas_object_del(view); });
 }
 
 void EwkWebViewBackend::Offset(double left, double top) {
@@ -306,7 +246,8 @@ void EwkWebViewBackend::Offset(double left, double top) {
 }
 
 void EwkWebViewBackend::Resize(double width, double height) {
-  evas_object_resize(view_, width, height);
+  evas_object_resize(view_, static_cast<int>(std::round(width)),
+                     static_cast<int>(std::round(height)));
 }
 
 void EwkWebViewBackend::Touch(int event_type, int button_type, double x,
@@ -504,9 +445,15 @@ std::string EwkWebViewBackend::GetCurrentUrl() {
 
 void EwkWebViewBackend::EvaluateJavaScript(
     const std::string& javascript, std::function<void(const char*)> callback) {
-  ewk_view_script_execute(
-      view_, javascript.c_str(), &EwkWebViewBackend::OnEvaluateJavaScript,
-      new std::function<void(const char*)>(std::move(callback)));
+  auto* callback_ptr =
+      new std::function<void(const char*)>(std::move(callback));
+  if (!ewk_view_script_execute(view_, javascript.c_str(),
+                               &EwkWebViewBackend::OnEvaluateJavaScript,
+                               callback_ptr)) {
+    LOG_WARN("ewk_view_script_execute failed.");
+    (*callback_ptr)(nullptr);
+    delete callback_ptr;
+  }
 }
 
 void EwkWebViewBackend::RegisterJavaScriptChannel(const std::string& name) {

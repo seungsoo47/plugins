@@ -18,12 +18,12 @@ WvInternalApiBinding::~WvInternalApiBinding() {
 }
 
 bool WvInternalApiBinding::Initialize() {
-  if (initialized_) {
-    return initialize_result_;
+  if (initialize_result_.has_value()) {
+    return *initialize_result_;
   }
-  initialized_ = true;
 
   if (!handle_) {
+    initialize_result_ = false;
     return false;
   }
 
@@ -215,5 +215,5 @@ bool WvInternalApiBinding::Initialize() {
       error.DescriptionGet && error.UrlGet && policy_decision.Use &&
       policy_decision.UrlGet && policy_decision.ResponseStatusCodeGet &&
       console_message.LevelGet && console_message.TextGet;
-  return initialize_result_;
+  return *initialize_result_;
 }

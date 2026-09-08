@@ -8,8 +8,7 @@
 #include <Evas.h>
 #include <glib.h>
 
-#include <algorithm>
-#include <atomic>
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <mutex>
@@ -17,6 +16,7 @@
 
 #include "buffer_pool.h"
 #include "log.h"
+#include "pending_teardown.h"
 
 namespace {
 
@@ -74,17 +74,10 @@ wv_modifier_e ConvertModifiers(unsigned int modifiers) {
   return static_cast<wv_modifier_e>(wv_modifiers);
 }
 
-// Views whose wv_view_destroy() has not run yet. The teardown closure runs
-// late (via g_timeout, after texture unregistration), so
-// FlushPendingTeardowns() has to drain this before wv_shutdown().
-struct PendingTeardown {
-  wv_view_h instance = nullptr;
-  std::shared_ptr<BufferPool> pool;
-  std::atomic<bool> completed{false};
-};
-
-std::mutex g_pending_teardown_mutex;
-std::vector<std::shared_ptr<PendingTeardown>> g_pending_teardowns;
+// The teardown closure runs late (via g_timeout, after texture
+// unregistration), so FlushPendingTeardowns() has to drain this before
+// wv_shutdown().
+PendingTeardownRegistry<wv_view_h> g_pending_teardowns;
 
 // wv_view_script_message_cb carries no user_data parameter, so JS-channel
 // messages are routed back to their backend through this registry. The entry
@@ -93,60 +86,31 @@ std::vector<std::shared_ptr<PendingTeardown>> g_pending_teardowns;
 std::mutex g_view_registry_mutex;
 std::map<wv_view_h, WvWebViewBackend*> g_view_registry;
 
-std::shared_ptr<PendingTeardown> RegisterPendingTeardown(
-    wv_view_h instance, std::shared_ptr<BufferPool> pool) {
-  auto pending = std::make_shared<PendingTeardown>();
-  pending->instance = instance;
-  pending->pool = std::move(pool);
-  std::lock_guard<std::mutex> lock(g_pending_teardown_mutex);
-  g_pending_teardowns.push_back(pending);
-  return pending;
-}
-
-void CompletePendingTeardown(const std::shared_ptr<PendingTeardown>& pending) {
-  bool expected = false;
-  if (pending->completed.compare_exchange_strong(expected, true) &&
-      pending->instance) {
-    WvInternalApiBinding::GetInstance().view.Destroy(pending->instance);
-  }
-  std::lock_guard<std::mutex> lock(g_pending_teardown_mutex);
-  auto it = std::find(g_pending_teardowns.begin(), g_pending_teardowns.end(),
-                      pending);
-  if (it != g_pending_teardowns.end()) {
-    g_pending_teardowns.erase(it);
-  }
-}
-
 }  // namespace
 
 WvWebViewBackend::WvWebViewBackend(Delegate* delegate) : delegate_(delegate) {}
 
 bool WvWebViewBackend::GlobalInitialize(bool standalone) {
   auto& wv = WvInternalApiBinding::GetInstance();
-  // wv_set_arguments() stores the argv used by wv_init(), so it must run
-  // before the engine boots. --enable-wv-standalone comes last so wrapper mode
-  // can drop it by shortening argc; wv_init() reads that switch to decide
-  // whether to run the WV implementation or forward everything to ewk_*.
-  const char* argv[] = {
-      "--disable-pinch", "--js-flags=--expose-gc", "--single-process",
-      "--no-zygote",     "--enable-wv-standalone",
+  std::vector<const char*> argv = {
+      "--disable-pinch",
+      "--js-flags=--expose-gc",
+      "--single-process",
+      "--no-zygote",
   };
-  int argc = sizeof(argv) / sizeof(argv[0]);
-  if (!standalone) {
-    --argc;
+  if (standalone) {
+    argv.push_back("--enable-wv-standalone");
   }
-  // wv_set_arguments() returns a TIZEN_ERROR_* code (0 == success), while
-  // wv_init() returns ewk_init()'s reference count (> 0 == success).
-  int result = wv.main.SetArguments(argc, argv);
+  int result = wv.main.SetArguments(static_cast<int>(argv.size()), argv.data());
   if (result != 0) {
-    LOG_WARN("wv_set_arguments() returned %d.", result);
+    LOG_ERROR("wv_set_arguments() returned %d.", result);
+    return false;
   }
   result = wv.main.Init();
   if (result <= 0) {
-    LOG_WARN("wv_init() returned %d.", result);
+    LOG_ERROR("wv_init() returned %d.", result);
     return false;
   }
-  LOG_INFO("wv_init() returned %d.", result);
   return true;
 }
 
@@ -155,42 +119,11 @@ void WvWebViewBackend::GlobalShutdown() {
   WvInternalApiBinding::GetInstance().main.Shutdown();
 }
 
-void WvWebViewBackend::FlushPendingTeardowns() {
-  constexpr gint64 kDeadlineUsec = 2 * G_USEC_PER_SEC;
-  const gint64 deadline = g_get_monotonic_time() + kDeadlineUsec;
-  for (;;) {
-    bool deadline_passed = g_get_monotonic_time() >= deadline;
-    std::vector<std::shared_ptr<PendingTeardown>> snapshot;
-    {
-      std::lock_guard<std::mutex> lock(g_pending_teardown_mutex);
-      if (g_pending_teardowns.empty()) {
-        return;
-      }
-      if (deadline_passed) {
-        snapshot = g_pending_teardowns;
-      }
-    }
-    if (deadline_passed) {
-      LOG_WARN("Forcing %zu pending teardown(s) past deadline",
-               snapshot.size());
-      for (auto& pending : snapshot) {
-        CompletePendingTeardown(pending);
-      }
-      continue;
-    }
-    if (!g_main_context_iteration(g_main_context_default(), FALSE)) {
-      g_usleep(1000);
-    }
-  }
-}
+void WvWebViewBackend::FlushPendingTeardowns() { g_pending_teardowns.Flush(); }
 
 bool WvWebViewBackend::Create(double width, double height, void* window,
-                              bool engine_policy) {
+                              bool /*engine_policy*/) {
   window_ = window;
-
-  if (engine_policy) {
-    LOG_WARN("engine_policy is not supported by the WV backend; ignored.");
-  }
 
   auto& wv = WvInternalApiBinding::GetInstance();
 
@@ -214,10 +147,10 @@ bool WvWebViewBackend::Create(double width, double height, void* window,
   wv.view.ImeWindowSet(view_, window_);
   wv.view.KeyEventsEnabledSet(view_, true);
 #ifdef WEBVIEW_TIZEN_TOUCH_EVENTS_ENABLED
-  wv.view.TouchEventsEnabledSet(view_, 1);
+  wv.view.TouchEventsEnabledSet(view_, true);
   wv.view.MouseEventsEnabledSet(view_, false);
 #else
-  wv.view.TouchEventsEnabledSet(view_, 0);
+  wv.view.TouchEventsEnabledSet(view_, false);
   wv.view.MouseEventsEnabledSet(view_, true);
 #endif
 
@@ -251,7 +184,8 @@ bool WvWebViewBackend::Create(double width, double height, void* window,
   wv.view.AddCallback(view_, "url,changed", &WvWebViewBackend::OnUrlChange,
                       this);
 
-  wv.view.Resize(view_, static_cast<int>(width), static_cast<int>(height));
+  wv.view.Resize(view_, static_cast<int>(std::round(width)),
+                 static_cast<int>(std::round(height)));
 
   {
     std::lock_guard<std::mutex> lock(g_view_registry_mutex);
@@ -300,8 +234,10 @@ std::function<void()> WvWebViewBackend::PrepareTeardown(
     wv.view.Suspend(instance);
   }
 
-  auto pending = RegisterPendingTeardown(instance, std::move(pool));
-  return [pending]() { CompletePendingTeardown(pending); };
+  return g_pending_teardowns.Prepare(
+      instance, std::move(pool), [](wv_view_h view) {
+        WvInternalApiBinding::GetInstance().view.Destroy(view);
+      });
 }
 
 void WvWebViewBackend::Offset(double left, double top) {
@@ -311,7 +247,8 @@ void WvWebViewBackend::Offset(double left, double top) {
 
 void WvWebViewBackend::Resize(double width, double height) {
   WvInternalApiBinding::GetInstance().view.Resize(
-      view_, static_cast<int>(width), static_cast<int>(height));
+      view_, static_cast<int>(std::round(width)),
+      static_cast<int>(std::round(height)));
 }
 
 void WvWebViewBackend::Touch(int event_type, int button_type, double x,

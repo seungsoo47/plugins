@@ -17,12 +17,12 @@ EwkInternalApiBinding::~EwkInternalApiBinding() {
 }
 
 bool EwkInternalApiBinding::Initialize() {
-  if (initialized_) {
-    return initialize_result_;
+  if (initialize_result_.has_value()) {
+    return *initialize_result_;
   }
-  initialized_ = true;
 
   if (!handle_) {
+    initialize_result_ = false;
     return false;
   }
 
@@ -119,5 +119,5 @@ bool EwkInternalApiBinding::Initialize() {
       settings.ForceZoomSet && console_message.LevelGet &&
       console_message.TextGet && console_message.LineGet &&
       console_message.SourceGet;
-  return initialize_result_;
+  return *initialize_result_;
 }
