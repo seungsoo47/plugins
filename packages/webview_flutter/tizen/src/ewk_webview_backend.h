@@ -82,7 +82,6 @@ class EwkWebViewBackend : public WebViewBackend {
  private:
   static Ecore_Evas* GetOffscreenHost();
   static void FreeOffscreenHost();
-  static void FlushPendingTeardowns();
 
   static void OnFrameRendered(void* data, Evas_Object* obj, void* event_info);
   static void OnLoadStarted(void* data, Evas_Object* obj, void* event_info);

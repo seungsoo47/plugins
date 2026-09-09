@@ -75,8 +75,6 @@ class WvWebViewBackend : public WebViewBackend {
   static void GlobalShutdown();
 
  private:
-  static void FlushPendingTeardowns();
-
   static void OnFrameRendered(wv_view_h obj, void* event_info, void* user_data);
   static void OnLoadStarted(wv_view_h obj, void* event_info, void* user_data);
   static void OnLoadFinished(wv_view_h obj, void* event_info, void* user_data);

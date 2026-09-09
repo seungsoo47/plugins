@@ -16,7 +16,6 @@
 
 #include "buffer_pool.h"
 #include "log.h"
-#include "pending_teardown.h"
 
 namespace {
 
@@ -74,8 +73,6 @@ wv_modifier_e ConvertModifiers(unsigned int modifiers) {
   return static_cast<wv_modifier_e>(wv_modifiers);
 }
 
-PendingTeardownRegistry<wv_view_h> g_pending_teardowns;
-
 std::mutex g_view_registry_mutex;
 std::map<wv_view_h, WvWebViewBackend*> g_view_registry;
 
@@ -111,8 +108,6 @@ void WvWebViewBackend::GlobalShutdown() {
   FlushPendingTeardowns();
   WvInternalApiBinding::GetInstance().main.Shutdown();
 }
-
-void WvWebViewBackend::FlushPendingTeardowns() { g_pending_teardowns.Flush(); }
 
 bool WvWebViewBackend::Create(double width, double height, void* window,
                               bool /*engine_policy*/) {
@@ -193,6 +188,7 @@ std::function<void()> WvWebViewBackend::PrepareTeardown(
   wv_view_h instance = view_;
   view_ = nullptr;
 
+  std::function<void()> destroy;
   if (instance) {
     auto& wv = WvInternalApiBinding::GetInstance();
     wv.view.RemoveFullCallback(instance, "offscreen,frame,rendered",
@@ -225,12 +221,13 @@ std::function<void()> WvWebViewBackend::PrepareTeardown(
 
     wv.view.Stop(instance);
     wv.view.Suspend(instance);
+
+    destroy = [instance]() {
+      WvInternalApiBinding::GetInstance().view.Destroy(instance);
+    };
   }
 
-  return g_pending_teardowns.Prepare(
-      instance, std::move(pool), [](wv_view_h view) {
-        WvInternalApiBinding::GetInstance().view.Destroy(view);
-      });
+  return RegisterPendingTeardown(std::move(pool), std::move(destroy));
 }
 
 void WvWebViewBackend::Offset(double left, double top) {}

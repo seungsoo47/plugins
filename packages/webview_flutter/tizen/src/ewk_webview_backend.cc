@@ -13,7 +13,6 @@
 
 #include "buffer_pool.h"
 #include "log.h"
-#include "pending_teardown.h"
 
 namespace {
 
@@ -64,8 +63,6 @@ void SyncEvasModifiers(Evas* evas, uint32_t modifiers) {
 
 Ecore_Evas* g_offscreen_host = nullptr;
 
-PendingTeardownRegistry<Evas_Object*> g_pending_teardowns;
-
 }  // namespace
 
 EwkWebViewBackend::EwkWebViewBackend(Delegate* delegate)
@@ -92,8 +89,6 @@ void EwkWebViewBackend::FreeOffscreenHost() {
     g_offscreen_host = nullptr;
   }
 }
-
-void EwkWebViewBackend::FlushPendingTeardowns() { g_pending_teardowns.Flush(); }
 
 bool EwkWebViewBackend::Create(double width, double height, void* window,
                                bool engine_policy) {
@@ -195,6 +190,7 @@ std::function<void()> EwkWebViewBackend::PrepareTeardown(
   Evas_Object* instance = view_;
   view_ = nullptr;
 
+  std::function<void()> destroy;
   if (instance) {
     evas_object_smart_callback_del(instance, "offscreen,frame,rendered",
                                    &EwkWebViewBackend::OnFrameRendered);
@@ -225,11 +221,11 @@ std::function<void()> EwkWebViewBackend::PrepareTeardown(
     evas_object_data_del(instance, kEwkInstance);
     ewk_view_stop(instance);
     ewk_view_suspend(instance);
+
+    destroy = [instance]() { evas_object_del(instance); };
   }
 
-  return g_pending_teardowns.Prepare(
-      instance, std::move(pool),
-      [](Evas_Object* view) { evas_object_del(view); });
+  return RegisterPendingTeardown(std::move(pool), std::move(destroy));
 }
 
 void EwkWebViewBackend::Offset(double left, double top) {

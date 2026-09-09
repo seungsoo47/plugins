@@ -78,8 +78,7 @@ class WebViewBackend {
   virtual std::string GetCurrentUrl() = 0;
   virtual void EvaluateJavaScript(
       const std::string& javascript,
-      std::function<void(bool success, const char* result_value)> callback) =
-      0;
+      std::function<void(bool success, const char* result_value)> callback) = 0;
   virtual void RegisterJavaScriptChannel(const std::string& name) = 0;
   virtual void ClearCache() = 0;
   virtual void ClearLocalStorage() = 0;
@@ -96,6 +95,14 @@ class WebViewBackend {
   virtual void JavaScriptPromptReply(const std::string& result) = 0;
   virtual void SetScrollbarVisible(bool visible) = 0;
   virtual bool ClearCookies() = 0;
+
+ protected:
+  // Keeps |pool| alive and defers |destroy| until the returned closure runs.
+  static std::function<void()> RegisterPendingTeardown(
+      std::shared_ptr<BufferPool> pool, std::function<void()> destroy);
+
+  // Must be called before the engine shuts down.
+  static void FlushPendingTeardowns();
 };
 
 #endif  // FLUTTER_PLUGIN_WEBVIEW_BACKEND_H_
