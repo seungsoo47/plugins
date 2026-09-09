@@ -31,18 +31,17 @@ BackendKind DefaultBackendForPlatform() {
   return BackendKind::kEwk;
 }
 
-BackendKind SelectedBackend() {
-  static const BackendKind kind = []() {
-    BackendKind selected = DefaultBackendForPlatform();
-    if (selected == BackendKind::kWvStandalone) {
-      LOG_INFO("WebView backend: WV (standalone mode).");
-    } else if (selected == BackendKind::kEwkWrapper) {
-      LOG_INFO("WebView backend: EWK wrapper mode (WV API).");
-    }
-    return selected;
-  }();
-  return kind;
+BackendKind DetectBackend() {
+  BackendKind selected = DefaultBackendForPlatform();
+  if (selected == BackendKind::kWvStandalone) {
+    LOG_INFO("WebView backend: WV (standalone mode).");
+  } else if (selected == BackendKind::kEwkWrapper) {
+    LOG_INFO("WebView backend: EWK wrapper mode (WV API).");
+  }
+  return selected;
 }
+
+const BackendKind kSelectedBackend = DetectBackend();
 
 bool g_wv_engine_initialized = false;
 
@@ -50,7 +49,7 @@ bool g_wv_engine_initialized = false;
 
 std::unique_ptr<WebViewBackend> WebViewBackendFactory::Create(
     WebViewBackend::Delegate* delegate) {
-  BackendKind kind = SelectedBackend();
+  BackendKind kind = kSelectedBackend;
   if (kind != BackendKind::kEwk) {
     if (!g_wv_engine_initialized) {
       LOG_ERROR("WV engine is not initialized; cannot create WebView.");
@@ -70,7 +69,7 @@ std::unique_ptr<WebViewBackend> WebViewBackendFactory::Create(
 }
 
 void WebViewBackendFactory::InitializeEngine() {
-  BackendKind kind = SelectedBackend();
+  BackendKind kind = kSelectedBackend;
   if (kind != BackendKind::kEwk) {
     if (!WvInternalApiBinding::GetInstance().Initialize()) {
       LOG_ERROR("Failed to initialize WV APIs; engine not started.");
@@ -88,7 +87,7 @@ void WebViewBackendFactory::InitializeEngine() {
 }
 
 void WebViewBackendFactory::ShutdownEngine() {
-  if (SelectedBackend() != BackendKind::kEwk) {
+  if (kSelectedBackend != BackendKind::kEwk) {
     if (g_wv_engine_initialized) {
       WvWebViewBackend::GlobalShutdown();
       g_wv_engine_initialized = false;

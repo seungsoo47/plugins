@@ -335,7 +335,6 @@ bool EwkWebViewBackend::SendKey(const char* key, const char* string,
       const_cast<Evas_Modifier*>(evas_key_modifier_get(evas));
   Evas_Lock* evas_locks = const_cast<Evas_Lock*>(evas_key_lock_get(evas));
 
-  // TODO(swift-kim): Deal with other members of the structure.
   if (is_down) {
     Evas_Event_Key_Down down_event = {};
     down_event.key = key;

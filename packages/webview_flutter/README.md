@@ -71,8 +71,7 @@ The plugin chooses a backend from the platform version reported by the device:
 | 10.1             | WV API, EWK wrapper mode    |
 | 11.0 and later   | WV API, standalone mode     |
 
-The WV backends are experimental. `WebViewController.tizenEnginePolicy` has no
-WV equivalent, so it is ignored (with a warning) on Tizen 10.1 and later.
+The WV backends are experimental. `WebViewController.tizenEnginePolicy` has no WV equivalent, so it is ignored (with a warning) on Tizen 10.1 and later.
 
 ## Note
 

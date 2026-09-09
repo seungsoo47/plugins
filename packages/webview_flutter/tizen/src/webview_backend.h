@@ -97,11 +97,9 @@ class WebViewBackend {
   virtual bool ClearCookies() = 0;
 
  protected:
-  // Keeps |pool| alive and defers |destroy| until the returned closure runs.
   static std::function<void()> RegisterPendingTeardown(
       std::shared_ptr<BufferPool> pool, std::function<void()> destroy);
 
-  // Must be called before the engine shuts down.
   static void FlushPendingTeardowns();
 };
 
