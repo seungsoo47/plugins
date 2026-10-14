@@ -310,6 +310,25 @@ void main() {
       await platform.create(playerId);
     });
 
+    testWidgets('#init disposes all players', (tester) async {
+      final playerIds = [playerId, for (var i = 0; i < 7; i++) 'player$i'];
+      for (final id in playerIds.skip(1)) {
+        await platform.create(id);
+      }
+
+      await GlobalAudioplayersPlatformInterface.instance.init();
+
+      for (final id in playerIds) {
+        await expectLater(
+          platform.stop(id),
+          throwsA(isA<PlatformException>()),
+        );
+      }
+
+      // Create player again, so it can be disposed in tearDown
+      await platform.create(playerId);
+    });
+
     if (features.hasVolume) {
       for (final td in assetTestDataList) {
         testWidgets('#volume ${td.source}', (tester) async {
