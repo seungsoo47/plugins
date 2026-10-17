@@ -1,6 +1,6 @@
 ## 0.3.0
 
-* Add support for `mapTypeControlEnabled`, `fullscreenControlEnabled`, `streetViewControlEnabled`, `webCameraControlEnabled`, and `webCameraControlPosition`.
+* Add support for `mapTypeControlEnabled`, `fullscreenControlEnabled`, `streetViewControlEnabled`, `webCameraControlEnabled`, `webCameraControlPosition`, `webGestureHandling`, and `fortyFiveDegreeImageryEnabled`.
 * Resolve `use_super_parameters` lint.
 * Omit obvious local variable types.
 * Reformat with a line length of 100.
