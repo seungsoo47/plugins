@@ -2,6 +2,7 @@
 
 * Add support for `mapTypeControlEnabled`, `fullscreenControlEnabled`, `streetViewControlEnabled`, `webCameraControlEnabled`, `webCameraControlPosition`, `webGestureHandling`, and `fortyFiveDegreeImageryEnabled`.
 * Add support for `onPointOfInterestTap`.
+* Fix `consumeTapEvents` for circles, polygons, and polylines.
 * Update google_maps_flutter_platform_interface to 2.17.0.
 * Resolve `use_super_parameters` lint.
 * Omit obvious local variable types.
