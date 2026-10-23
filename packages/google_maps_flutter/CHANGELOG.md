@@ -5,6 +5,7 @@
 * Fix `consumeTapEvents` for circles, polygons, and polylines.
 * Fix initial map objects being added to the map twice.
 * Fix `onMapCreated` never being called when a map tile request stalls or fails.
+* Fix map events being dropped when the reported coordinates are integers.
 * Update google_maps_flutter_platform_interface to 2.17.0.
 * Resolve `use_super_parameters` lint.
 * Omit obvious local variable types.
