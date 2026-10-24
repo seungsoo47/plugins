@@ -123,6 +123,45 @@ Future<void> main() async {
     await expectLater(channelCompleter.future, completion('hello'));
   });
 
+  testWidgets('removeJavaScriptChannel', (WidgetTester tester) async {
+    final pageFinished = Completer<void>();
+    final controller = WebViewController();
+    await controller.setJavaScriptMode(JavaScriptMode.unrestricted);
+    await controller.setNavigationDelegate(
+      NavigationDelegate(onPageFinished: (_) => pageFinished.complete()),
+    );
+
+    final removedMessages = <String>[];
+    await controller.addJavaScriptChannel(
+      'Echo',
+      onMessageReceived: (JavaScriptMessage message) => removedMessages.add(message.message),
+    );
+    final doneCompleter = Completer<void>();
+    await controller.addJavaScriptChannel(
+      'Done',
+      onMessageReceived: (JavaScriptMessage message) => doneCompleter.complete(),
+    );
+
+    await controller.loadHtmlString('data:text/html;charset=utf-8;base64,PCFET0NUWVBFIGh0bWw+');
+
+    await tester.pumpWidget(WebViewWidget(controller: controller));
+
+    await pageFinished.future;
+
+    await controller.removeJavaScriptChannel('Echo');
+    await controller.runJavaScript('Echo.postMessage("removed"); Done.postMessage("");');
+    await doneCompleter.future;
+    expect(removedMessages, isEmpty);
+
+    final channelCompleter = Completer<String>();
+    await controller.addJavaScriptChannel(
+      'Echo',
+      onMessageReceived: (JavaScriptMessage message) => channelCompleter.complete(message.message),
+    );
+    await controller.runJavaScript('Echo.postMessage("added");');
+    await expectLater(channelCompleter.future, completion('added'));
+  });
+
   testWidgets('resize webview', (WidgetTester tester) async {
     final initialResizeCompleter = Completer<void>();
     final buttonTapResizeCompleter = Completer<void>();

@@ -1,3 +1,7 @@
+## 0.13.0
+
+* Add `removeJavaScriptChannel`.
+
 ## 0.12.0
 
 * Add `getCookies` to the cookie manager using the EWK and WV cookie getters.
