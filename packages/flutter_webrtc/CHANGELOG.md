@@ -1,3 +1,7 @@
+## 0.2.6
+
+* Apply `echoCancellation`, `noiseSuppression` and `autoGainControl` audio constraints.
+
 ## 0.2.5
 
 * Follow the analysis options of the frontend plugin.
