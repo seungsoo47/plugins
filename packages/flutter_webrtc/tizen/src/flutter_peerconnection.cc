@@ -741,7 +741,7 @@ scoped_refptr<RTCRtpParameters> FlutterPeerConnection::updateRtpParameters(
         param->set_rid(GetValue<std::string>(value));
       }
       value = findEncodableValue(map, "ssrc");
-      if (!value.IsNull()) {
+      if (!value.IsNull() && GetValue<int>(value) != 0) {
         param->set_ssrc(GetValue<int>(value));
       }
       value = findEncodableValue(map, "maxBitrate");
@@ -767,7 +767,7 @@ scoped_refptr<RTCRtpParameters> FlutterPeerConnection::updateRtpParameters(
         param->set_scale_resolution_down_by(GetValue<double>(value));
       }
       value = findEncodableValue(map, "scalabilityMode");
-      if (!value.IsNull()) {
+      if (!value.IsNull() && !GetValue<std::string>(value).empty()) {
         param->set_scalability_mode(GetValue<std::string>(value));
       }
       value = findEncodableValue(map, "priority");
@@ -783,6 +783,7 @@ scoped_refptr<RTCRtpParameters> FlutterPeerConnection::updateRtpParameters(
       encoding++;
     }
   }
+  parameters->set_encodings(params);
 
   EncodableValue value =
       findEncodableValue(newParameters, "degradationPreference");
