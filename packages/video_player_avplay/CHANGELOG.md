@@ -1,3 +1,7 @@
+## 0.8.23
+
+* Fix `initialize()` never completing when the player fails to prepare.
+
 ## 0.8.22
 * Update plusplayer
   1. [DASH] Fix trun download issue.

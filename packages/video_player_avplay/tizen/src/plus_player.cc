@@ -107,6 +107,7 @@ void PlusPlayer::RegisterListener() {
 int64_t PlusPlayer::Create(const std::string &uri,
                            const CreateMessage &create_message) {
   LOG_INFO("[PlusPlayer] Create player.");
+  is_error_reported_ = false;
 
   std::string video_format;
 
@@ -1149,13 +1150,21 @@ bool PlusPlayer::OnLicenseAcquired(int *drm_handle, unsigned int length,
 void PlusPlayer::OnPrepareDone(bool ret, void *user_data) {
   PlusPlayer *self = reinterpret_cast<PlusPlayer *>(user_data);
 
+  if (!ret) {
+    LOG_ERROR("[PlusPlayer] Fail to prepare.");
+    if (!self->is_error_reported_.exchange(true)) {
+      self->SendError("[PlusPlayer] error", "Error: Failed to prepare");
+    }
+    return;
+  }
+
   if (!SetDisplayVisible(self->player_, true)) {
     LOG_ERROR("[PlusPlayer] Fail to set display visible.");
   }
-  if (!self->is_initialized_ && ret) {
+  if (!self->is_initialized_) {
     self->SendInitialized();
   }
-  if (self->is_restored_ && ret) {
+  if (self->is_restored_) {
     self->SendRestored();
   }
 }
@@ -1471,6 +1480,7 @@ void PlusPlayer::OnError(const plusplayer::ErrorType &error_code,
 
   self->on_seek_completed_ = nullptr;
   self->is_seeking_ = false;
+  self->is_error_reported_ = true;
   self->SendError("[PlusPlayer] error",
                   std::string("Error: ") + GetErrorMessage(error_code));
 }
@@ -1482,6 +1492,7 @@ void PlusPlayer::OnErrorMsg(const plusplayer::ErrorType &error_code,
 
   self->on_seek_completed_ = nullptr;
   self->is_seeking_ = false;
+  self->is_error_reported_ = true;
   self->SendError("PlusPlayer error", std::string("Error: ") + error_msg);
 }
 
