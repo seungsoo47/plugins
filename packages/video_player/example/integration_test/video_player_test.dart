@@ -370,4 +370,37 @@ void main() {
       await expectLater(controller.selectAudioTrack('1'), throwsA(isA<PlatformException>()));
     });
   });
+
+  group('video tracks', () {
+    test('can select a video track and restore automatic selection', () async {
+      controller = VideoPlayerController.networkUrl(
+        Uri.parse(
+          'https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_16x9/bipbop_16x9_variant.m3u8',
+        ),
+      );
+      await controller.initialize();
+
+      List<VideoTrack> tracks = await controller.getVideoTracks();
+      expect(tracks.length, greaterThan(1));
+      expect(tracks.where((VideoTrack track) => track.isSelected), isEmpty);
+
+      final VideoTrack lowest = tracks.reduce(
+        (VideoTrack a, VideoTrack b) => a.bitrate! <= b.bitrate! ? a : b,
+      );
+      await controller.selectVideoTrack(lowest);
+      tracks = await controller.getVideoTracks();
+      expect(tracks.singleWhere((VideoTrack track) => track.isSelected).id, lowest.id);
+
+      await controller.selectVideoTrack(null);
+      tracks = await controller.getVideoTracks();
+      expect(tracks.where((VideoTrack track) => track.isSelected), isEmpty);
+    });
+
+    test('returns no video tracks for a non-adaptive video', () async {
+      controller = VideoPlayerController.asset(_videoAssetKey);
+      await controller.initialize();
+
+      expect(await controller.getVideoTracks(), isEmpty);
+    });
+  });
 }

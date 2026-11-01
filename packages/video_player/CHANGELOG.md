@@ -2,6 +2,7 @@
 
 * Add support for `getAudioTracks` and `selectAudioTrack`.
 * Add support for `setPreventsDisplaySleepDuringVideoPlayback`.
+* Add support for `getVideoTracks`, `selectVideoTrack` and `isVideoTrackSupportAvailable`.
 
 ## 2.5.16
 
