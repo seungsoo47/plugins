@@ -21,7 +21,7 @@ You can use this plugin to ask the user for runtime permissions if your app perf
    ```yaml
    dependencies:
      permission_handler: ^13.0.1
-     permission_handler_tizen: ^1.4.7
+     permission_handler_tizen: ^1.5.0
    ```
 
    Then you can import `permission_handler` in your Dart code:
@@ -36,7 +36,8 @@ You can use this plugin to ask the user for runtime permissions if your app perf
 
 | Permission | Tizen permission | Tizen privileges |
 |-|-|-|
-| `Permission.calendar` | Calendar | `http://tizen.org/privilege/calendar.read`<br>`http://tizen.org/privilege/calendar.write` |
+| `Permission.calendar`<br>`Permission.calendarFullAccess` | Calendar | `http://tizen.org/privilege/calendar.read`<br>`http://tizen.org/privilege/calendar.write` |
+| `Permission.calendarWriteOnly` | Calendar | `http://tizen.org/privilege/calendar.write` |
 | `Permission.camera` | Camera | `http://tizen.org/privilege/camera` |
 | `Permission.contacts` | Contacts | `http://tizen.org/privilege/contact.read`<br>`http://tizen.org/privilege/contact.write` |
 | `Permission.location`<br>`Permission.locationAlways`<br>`Permission.locationWhenInUse` | Location | `http://tizen.org/privilege/location`<br>`http://tizen.org/privilege/location.coarse` |
@@ -54,7 +55,6 @@ The following permissions are not applicable for Tizen:
 
 The following permissions are applicable for Tizen but not supported by this plugin yet. They are always reported as granted:
 
-- `calendarFullAccess`, `calendarWriteOnly`: use the deprecated `Permission.calendar` instead.
 - `notification`
 - `photos`
 

@@ -30,6 +30,16 @@ void main() {
       expect(await Permission.storage.status, PermissionStatus.granted);
     });
 
+    test('calendarFullAccess permission is granted', () async {
+      expect(
+          await Permission.calendarFullAccess.status, PermissionStatus.granted);
+    });
+
+    test('calendarWriteOnly permission is granted', () async {
+      expect(
+          await Permission.calendarWriteOnly.status, PermissionStatus.granted);
+    });
+
     test('contacts permission is granted', () async {
       expect(await Permission.contacts.status, PermissionStatus.granted);
     });

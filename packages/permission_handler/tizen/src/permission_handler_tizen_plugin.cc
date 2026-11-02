@@ -22,7 +22,10 @@ namespace {
 std::string PermissionToPrivilege(Permission permission) {
   switch (permission) {
     case Permission::kCalendar:
+    case Permission::kCalendarFullAccess:
       return "http://tizen.org/privilege/calendar.read";
+    case Permission::kCalendarWriteOnly:
+      return "http://tizen.org/privilege/calendar.write";
     case Permission::kCamera:
       return "http://tizen.org/privilege/camera";
     case Permission::kContacts:

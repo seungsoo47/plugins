@@ -1,3 +1,7 @@
+## 1.5.0
+
+* Support `Permission.calendarFullAccess` and `Permission.calendarWriteOnly`.
+
 ## 1.4.7
 
 * Update permission_handler to 13.0.1.
