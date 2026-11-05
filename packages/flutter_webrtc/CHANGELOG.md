@@ -1,6 +1,7 @@
 ## 0.2.7
 
 * Apply `echoCancellation`, `noiseSuppression` and `autoGainControl` audio constraints.
+* Fix `MediaStreamTrack.captureFrame` occasionally waiting for the full timeout before returning a captured frame.
 
 ## 0.2.6
 
