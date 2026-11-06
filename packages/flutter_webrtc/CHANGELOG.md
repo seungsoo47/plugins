@@ -2,6 +2,7 @@
 
 * Apply `echoCancellation`, `noiseSuppression` and `autoGainControl` audio constraints.
 * Fix `MediaStreamTrack.captureFrame` occasionally waiting for the full timeout before returning a captured frame.
+* Fix `Helper.setVolume` failing to find remote audio tracks received with Unified Plan.
 
 ## 0.2.6
 

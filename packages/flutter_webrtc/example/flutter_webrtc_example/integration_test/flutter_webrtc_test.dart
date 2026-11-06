@@ -151,6 +151,28 @@ void main() {
       await pc1.close();
       await pc2.close();
     }, timeout: const Timeout(Duration(seconds: 10)));
+
+    test('setVolume finds a remote audio track', () async {
+      final pc1 = await createPeerConnection(_kConfig);
+      final pc2 = await createPeerConnection(_kConfig);
+      final remoteTrack = Completer<MediaStreamTrack>();
+      pc2.onTrack = (RTCTrackEvent event) {
+        if (!remoteTrack.isCompleted) {
+          remoteTrack.complete(event.track);
+        }
+      };
+      await pc1.addTransceiver(
+        kind: RTCRtpMediaType.RTCRtpMediaTypeAudio,
+        init: RTCRtpTransceiverInit(direction: TransceiverDirection.SendOnly),
+      );
+      await _negotiate(pc1, pc2);
+
+      final track = await remoteTrack.future;
+      expect(track.kind, 'audio');
+      await expectLater(Helper.setVolume(0.5, track), completes);
+      await pc1.close();
+      await pc2.close();
+    }, timeout: const Timeout(Duration(seconds: 10)));
   });
 
   group('getUserMedia', () {

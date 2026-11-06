@@ -42,6 +42,7 @@ class FlutterPeerConnectionObserver : public RTCPeerConnectionObserver {
   std::unique_ptr<EventChannelProxy> event_channel_;
   scoped_refptr<RTCPeerConnection> peerconnection_;
   std::map<std::string, scoped_refptr<RTCMediaStream>> remote_streams_;
+  std::map<std::string, scoped_refptr<RTCMediaTrack>> remote_tracks_;
   FlutterWebRTCBase* base_;
   std::string id_;
 };
