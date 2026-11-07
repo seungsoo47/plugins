@@ -1,3 +1,7 @@
+## 0.6.1
+
+* Fix a crash and uncaught errors when a WebView is disposed while pending method calls are being applied.
+
 ## 0.6.0
 
 * Update lightweight web engine (1.5.11).

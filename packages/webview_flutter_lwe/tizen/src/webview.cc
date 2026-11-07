@@ -277,6 +277,8 @@ void WebView::Dispose() {
   // loop bail out instead of touching a destroyed WebView.
   *is_alive_ = false;
 
+  webview_channel_->SetMethodCallHandler(nullptr);
+
   // Stop the web engine first so its renderer thread stops writing into the
   // shared TBM surfaces before anything is torn down.
   if (webview_instance_) {

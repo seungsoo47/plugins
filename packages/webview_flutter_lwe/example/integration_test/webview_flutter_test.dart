@@ -62,6 +62,22 @@ Future<void> main() async {
     expect(currentUrl, primaryUrl);
   });
 
+  testWidgets('disposing right after creation does not throw', (WidgetTester tester) async {
+    for (var i = 0; i < 5; i++) {
+      final controller = WebViewController();
+      for (var j = 0; j < 50; j++) {
+        unawaited(controller.setBackgroundColor(Colors.white));
+      }
+      unawaited(controller.loadRequest(Uri.parse(primaryUrl)));
+
+      await tester.pumpWidget(WebViewWidget(controller: controller));
+      await tester.pump();
+      await tester.pumpWidget(const SizedBox());
+    }
+    await Future<void>.delayed(const Duration(seconds: 2));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('getCookies', (WidgetTester tester) async {
     final pageFinished = Completer<void>();
 

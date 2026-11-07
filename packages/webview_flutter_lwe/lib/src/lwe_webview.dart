@@ -63,14 +63,19 @@ class LweWebView {
 
   /// Applies the requested settings before [TizenView] is created.
   Future<void> _callPendingMethodCalls() async {
-    if (hasNavigationDelegate) {
-      await _invokeChannelMethod<void>('hasNavigationDelegate', hasNavigationDelegate);
-    }
-
-    for (final (String method, dynamic arguments) in _pendingMethodCalls) {
-      await _lweWebViewChannel.invokeMethod<void>(method, arguments);
-    }
+    final calls = <(String, dynamic)>[
+      if (hasNavigationDelegate) ('hasNavigationDelegate', hasNavigationDelegate),
+      ..._pendingMethodCalls,
+    ];
     _pendingMethodCalls.clear();
+
+    for (final (String method, dynamic arguments) in calls) {
+      try {
+        await _lweWebViewChannel.invokeMethod<void>(method, arguments);
+      } on MissingPluginException {
+        return;
+      }
+    }
   }
 
   /// Loads the file located on the specified [absoluteFilePath].
